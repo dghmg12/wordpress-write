@@ -67,10 +67,17 @@ TAGS: 태그1,태그2,태그3,태그4"""
     # 본문: 메타 줄 제거
     body = re.sub(r'^(TITLE|IMAGE_QUERY|TAGS):.*$', '', raw, flags=re.MULTILINE).strip()
     paragraphs = [p.strip() for p in body.split('\n\n') if p.strip()]
-    content_html = '\n'.join(f'<p>{p}</p>' for p in paragraphs)
+    body_html = '\n'.join(f'<p>{p}</p>' for p in paragraphs)
     if tags:
-        content_html += '\n<p style="margin-top:1.2em;font-size:0.85em;color:#aaa;">' \
-                        + ' '.join(f'#{t}' for t in tags) + '</p>'
+        body_html += '\n<p style="margin-top:1.2em;font-size:0.85em;color:#aaa;">' \
+                     + ' '.join(f'#{t}' for t in tags) + '</p>'
+
+    # 한 입 지식 전용 헤더 (레이블 + H2 제목)
+    content_html = (
+        f'<p style="font-size:1em;font-weight:700;color:#F41414;margin-bottom:6px;">💡 오늘의 경제 용어</p>\n'
+        f'<h2><strong>{term_title}</strong></h2>\n'
+        + body_html
+    )
 
     print(f"  용어: {term_title} / {len(body)}자")
 
