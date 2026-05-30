@@ -75,7 +75,7 @@ TAGS: 태그1,태그2,태그3,태그4"""
     # 한 입 지식 전용 헤더 (레이블 + H2 제목)
     content_html = (
         f'<p style="font-size:1em;font-weight:700;color:#F41414;margin-bottom:6px;">💡 오늘의 경제 용어</p>\n'
-        f'<h2><strong>{term_title}</strong></h2>\n'
+        f'<h1>{term_title}</h1>\n'
         + body_html
     )
 
