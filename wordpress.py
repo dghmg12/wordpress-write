@@ -203,18 +203,24 @@ def _credit_to_korean(credit: str) -> str:
 
 
 def _make_img_block(image_url: str, alt: str = "", credit: str = None) -> str:
-    """이미지 HTML 블록 생성"""
+    """
+    이미지 Gutenberg 블록 생성.
+    wp:html 블록으로 감싸야 편집기에서 저장해도 이미지가 사라지지 않음.
+    """
     caption_kr = _credit_to_korean(credit)
-    credit_html = (
-        f'<figcaption style="text-align:center;font-size:0.8em;color:#999;margin-top:4px;">{caption_kr}</figcaption>'
+    figcaption = (
+        f'<figcaption class="wp-element-caption" style="text-align:center;font-size:0.8em;color:#999;margin-top:4px;">'
+        f'{caption_kr}</figcaption>'
         if caption_kr else ""
     )
-    return (
-        f'\n<figure class="wp-block-image size-large" style="text-align:center;margin:1.8em 0;">'
+    inner = (
+        f'<figure class="wp-block-image size-large" style="text-align:center;margin:1.8em 0;">'
         f'<img src="{image_url}" alt="{alt}" style="max-width:100%;height:auto;border-radius:8px;" />'
-        f'{credit_html}'
-        f'</figure>\n'
+        f'{figcaption}'
+        f'</figure>'
     )
+    # wp:html 블록으로 감싸기 → Gutenberg 편집 후 저장해도 보존됨
+    return f'\n<!-- wp:html -->\n{inner}\n<!-- /wp:html -->\n'
 
 
 def _insert_images_into_content(content_html: str, images: list[dict], alt: str = "",

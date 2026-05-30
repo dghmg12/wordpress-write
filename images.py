@@ -12,6 +12,7 @@ API 키 발급:
 """
 import requests
 import os
+import random
 
 
 def fetch_image(query: str) -> dict | None:
@@ -46,25 +47,29 @@ def fetch_multiple_images(query: str, count: int = 4) -> list[dict]:
 
 
 def _fetch_pexels_multiple(query: str, api_key: str, count: int) -> list[dict]:
-    """Pexels API로 이미지 여러 장 검색"""
+    """Pexels API로 이미지 여러 장 검색 (랜덤 페이지로 다양성 확보)"""
     try:
+        fetch_count = max(count * 4, 15)   # 넉넉히 가져온 뒤 랜덤 선택
+        page = random.randint(1, 4)
         resp = requests.get(
             "https://api.pexels.com/v1/search",
             headers={"Authorization": api_key},
-            params={"query": query, "per_page": max(count, 5), "orientation": "landscape"},
+            params={"query": query, "per_page": fetch_count,
+                    "orientation": "landscape", "page": page},
             timeout=10,
         )
         photos = resp.json().get("photos", []) if resp.ok else []
+        # 결과 없으면 page=1로 재시도
         if not photos:
-            # 영어로 재시도
             resp2 = requests.get(
                 "https://api.pexels.com/v1/search",
                 headers={"Authorization": api_key},
-                params={"query": query, "per_page": max(count, 5), "orientation": "landscape"},
+                params={"query": query, "per_page": fetch_count, "orientation": "landscape"},
                 timeout=10,
             )
             photos = resp2.json().get("photos", []) if resp2.ok else []
 
+        random.shuffle(photos)
         return [
             {
                 "url": p["src"]["large2x"],
@@ -80,8 +85,10 @@ def _fetch_pexels_multiple(query: str, api_key: str, count: int) -> list[dict]:
 
 
 def _fetch_pixabay_multiple(query: str, api_key: str, count: int) -> list[dict]:
-    """Pixabay API로 이미지 여러 장 검색"""
+    """Pixabay API로 이미지 여러 장 검색 (랜덤 페이지로 다양성 확보)"""
     try:
+        fetch_count = min(max(count * 4, 15), 50)   # 넉넉히 가져온 뒤 랜덤 선택
+        page = random.randint(1, 5)
         resp = requests.get(
             "https://pixabay.com/api/",
             params={
@@ -89,12 +96,14 @@ def _fetch_pixabay_multiple(query: str, api_key: str, count: int) -> list[dict]:
                 "q": query,
                 "image_type": "photo",
                 "orientation": "horizontal",
-                "per_page": max(count, 5),
+                "per_page": fetch_count,
+                "page": page,
                 "safesearch": "true",
             },
             timeout=10,
         )
         hits = resp.json().get("hits", []) if resp.ok else []
+        # 결과 없으면 page=1로 재시도
         if not hits:
             resp2 = requests.get(
                 "https://pixabay.com/api/",
@@ -103,14 +112,14 @@ def _fetch_pixabay_multiple(query: str, api_key: str, count: int) -> list[dict]:
                     "q": query,
                     "image_type": "photo",
                     "orientation": "horizontal",
-                    "per_page": max(count, 5),
+                    "per_page": fetch_count,
                     "safesearch": "true",
-                    "lang": "en",
                 },
                 timeout=10,
             )
             hits = resp2.json().get("hits", []) if resp2.ok else []
 
+        random.shuffle(hits)
         return [
             {
                 "url": h["largeImageURL"],
