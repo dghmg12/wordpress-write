@@ -1,0 +1,49 @@
+name: WP 자동 포스팅 (매일 오전 8시 KST)
+
+on:
+  schedule:
+    - cron: '0 23 * * *'   # 23:00 UTC = 다음날 오전 8:00 KST
+  workflow_dispatch:         # GitHub에서 수동 실행도 가능
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: 자동 포스팅 실행
+        env:
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          WP_URL:             ${{ secrets.WP_URL }}
+          WP_USER:            ${{ secrets.WP_USER }}
+          WP_APP_PASSWORD:    ${{ secrets.WP_APP_PASSWORD }}
+          WP2_URL:            ${{ secrets.WP2_URL }}
+          WP2_USER:           ${{ secrets.WP2_USER }}
+          WP2_APP_PASSWORD:   ${{ secrets.WP2_APP_PASSWORD }}
+          WP_STATUS:          draft
+          PIXABAY_API_KEY:    ${{ secrets.PIXABAY_API_KEY }}
+          IMAGE_MAX_WIDTH:    "1200"
+          IMAGE_MAX_HEIGHT:   "900"
+          IMAGE_QUALITY:      "70"
+          IMAGE_SIZE_LIMIT_KB: "100"
+        run: python run_daily.py
+
+      - name: 키워드 기록 저장 (used_topics.json 커밋)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add used_topics.json
+          git diff --cached --quiet || git commit -m "chore: 키워드 추적 업데이트 $(date +'%Y-%m-%d')"
+          git push
