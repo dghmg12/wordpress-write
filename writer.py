@@ -190,47 +190,78 @@ def parse_output(raw: str) -> dict:
 
 
 def markdown_to_html(text: str) -> str:
-    """Markdown 텍스트를 WordPress용 HTML로 변환"""
+    """
+    Markdown → WordPress Gutenberg 블록 형식 HTML 변환.
+    각 요소를 독립된 블록으로 만들어 편집 시 개별 수정 가능.
+    """
     lines = text.split("\n")
-    parts = []
+    blocks = []
     in_list = False
+    list_items = []
+
+    def close_list():
+        nonlocal in_list
+        if list_items:
+            items_html = "".join(
+                f"\n<!-- wp:list-item --><li>{item}</li><!-- /wp:list-item -->"
+                for item in list_items
+            )
+            blocks.append(
+                f'<!-- wp:list -->\n<ul class="wp-block-list">{items_html}\n</ul>\n<!-- /wp:list -->'
+            )
+            list_items.clear()
+        in_list = False
 
     for line in lines:
         is_list_item = line.startswith("- ") or line.startswith("* ")
 
-        if in_list and not is_list_item:
-            parts.append("</ul>")
-            in_list = False
+        if not is_list_item and in_list:
+            close_list()
 
         if line.startswith("# "):
             pass  # 포스트 제목은 WordPress가 H1로 출력 → 본문엔 생략
+
         elif line.startswith("## "):
-            # H2는 항상 bold 적용 (markdown **bold** 이미 있으면 중복 방지)
-            raw_title = line[3:].strip()
-            inner = apply_inline(raw_title)
-            # 이미 <strong>으로 감싸져 있지 않으면 추가
+            raw = line[3:].strip()
+            inner = apply_inline(raw)
             if not inner.startswith("<strong>"):
                 inner = f"<strong>{inner}</strong>"
-            parts.append(f"<h2>{inner}</h2>")
+            blocks.append(
+                f'<!-- wp:heading {{"level":2}} -->\n'
+                f'<h2 class="wp-block-heading">{inner}</h2>\n'
+                f'<!-- /wp:heading -->'
+            )
+
         elif line.startswith("### "):
-            title = line[4:].strip()
-            parts.append(f"<h3>{apply_inline(title)}</h3>")
+            raw = line[4:].strip()
+            blocks.append(
+                f'<!-- wp:heading {{"level":3}} -->\n'
+                f'<h3 class="wp-block-heading">{apply_inline(raw)}</h3>\n'
+                f'<!-- /wp:heading -->'
+            )
+
         elif is_list_item:
-            if not in_list:
-                parts.append("<ul>")
-                in_list = True
-            item = apply_inline(line[2:].strip())
-            parts.append(f"<li>{item}</li>")
+            in_list = True
+            list_items.append(apply_inline(line[2:].strip()))
+
         elif line.strip() == "":
-            parts.append("")
+            pass  # 빈 줄은 블록 구분으로 사용
+
+        elif line.strip().startswith("<"):
+            # 이미 HTML인 줄 (출처 표기, 인라인 링크 단락 등) → Custom HTML 블록
+            blocks.append(f'<!-- wp:html -->\n{line.strip()}\n<!-- /wp:html -->')
+
         else:
-            converted = apply_inline(line)
-            parts.append(f"<p>{converted}</p>")
+            blocks.append(
+                f'<!-- wp:paragraph -->\n'
+                f'<p>{apply_inline(line)}</p>\n'
+                f'<!-- /wp:paragraph -->'
+            )
 
     if in_list:
-        parts.append("</ul>")
+        close_list()
 
-    return "\n".join(parts)
+    return "\n\n".join(blocks)
 
 
 def apply_inline(text: str) -> str:

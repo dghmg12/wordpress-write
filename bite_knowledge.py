@@ -69,17 +69,23 @@ TAGS: 태그1,태그2,태그3,태그4"""
     # 본문: 메타 줄 제거
     body = re.sub(r'^(TITLE|IMAGE_QUERY|TAGS):.*$', '', raw, flags=re.MULTILINE).strip()
     paragraphs = [p.strip() for p in body.split('\n\n') if p.strip()]
-    body_html = '\n'.join(f'<p>{p}</p>' for p in paragraphs)
-    if tags:
-        body_html += '\n<p style="margin-top:1.2em;font-size:0.85em;color:#aaa;">' \
-                     + ' '.join(f'#{t}' for t in tags) + '</p>'
 
-    # 한 입 지식 전용 헤더 (레이블 + H2 제목)
-    content_html = (
-        f'<p style="font-size:1em;font-weight:700;color:#F41414;margin-bottom:6px;">💡 오늘의 경제 용어</p>\n'
-        f'<h1>{term_title}</h1>\n'
-        + body_html
-    )
+    # Gutenberg 블록 형식으로 조립
+    body_blocks = [
+        f'<!-- wp:html -->\n<p style="font-size:1em;font-weight:700;color:#F41414;margin-bottom:6px;">💡 오늘의 경제 용어</p>\n<!-- /wp:html -->',
+        f'<!-- wp:heading {{"level":1}} -->\n<h1 class="wp-block-heading">{term_title}</h1>\n<!-- /wp:heading -->',
+    ]
+    for p in paragraphs:
+        body_blocks.append(
+            f'<!-- wp:paragraph -->\n<p>{p}</p>\n<!-- /wp:paragraph -->'
+        )
+    if tags:
+        tags_str = ' '.join(f'#{t}' for t in tags)
+        body_blocks.append(
+            f'<!-- wp:html -->\n<p style="margin-top:1.2em;font-size:0.85em;color:#aaa;">{tags_str}</p>\n<!-- /wp:html -->'
+        )
+
+    content_html = '\n\n'.join(body_blocks)
 
     print(f"  용어: {term_title} / {len(body)}자")
 
