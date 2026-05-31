@@ -125,11 +125,11 @@ TAGS: 태그1,태그2,태그3,태그4"""
             caption_kr='이미지 출처: Pixabay',
         )
 
-    # 포스트 발행
+    # 포스트 발행 (한 입 지식은 바로 publish → 스와이퍼에서 즉시 노출)
     post_data = {
         'title':      term_title,
         'content':    content_html,
-        'status':     'draft',
+        'status':     'publish',
         'categories': [CATEGORY_ID],
         'tags':       tag_ids,
     }
