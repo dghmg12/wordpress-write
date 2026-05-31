@@ -24,6 +24,80 @@ def fetch_image(query: str) -> dict | None:
     return results[0] if results else None
 
 
+def fetch_featured_image(query: str) -> dict | None:
+    """
+    대표 이미지 전용 검색 - 랜덤화 없이 가장 관련성 높은 이미지 1개 반환.
+    본문 이미지와 달리 page=1, 셔플 없음 → 글 주제와 가장 잘 맞는 결과.
+    """
+    pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
+    pixabay_key = os.environ.get("PIXABAY_API_KEY", "").strip()
+
+    if pexels_key:
+        result = _fetch_pexels_featured(query, pexels_key)
+        if result:
+            return result
+
+    if pixabay_key:
+        result = _fetch_pixabay_featured(query, pixabay_key)
+        if result:
+            return result
+
+    print("  ⚠ 대표 이미지를 찾지 못했습니다.")
+    return None
+
+
+def _fetch_pexels_featured(query: str, api_key: str) -> dict | None:
+    """Pexels - page 1, 첫 번째 결과 반환 (랜덤화 없음)"""
+    try:
+        resp = requests.get(
+            "https://api.pexels.com/v1/search",
+            headers={"Authorization": api_key},
+            params={"query": query, "per_page": 5, "orientation": "landscape"},
+            timeout=10,
+        )
+        photos = resp.json().get("photos", []) if resp.ok else []
+        if photos:
+            p = photos[0]
+            return {
+                "url": p["src"]["large2x"],
+                "alt": p.get("alt") or query,
+                "credit": f"Photo by {p['photographer']} on Pexels",
+                "source": "pexels",
+            }
+    except Exception as e:
+        print(f"  ⚠ Pexels 대표 이미지 오류: {e}")
+    return None
+
+
+def _fetch_pixabay_featured(query: str, api_key: str) -> dict | None:
+    """Pixabay - page 1, 첫 번째 결과 반환 (랜덤화 없음)"""
+    try:
+        resp = requests.get(
+            "https://pixabay.com/api/",
+            params={
+                "key": api_key,
+                "q": query,
+                "image_type": "photo",
+                "orientation": "horizontal",
+                "per_page": 5,
+                "safesearch": "true",
+            },
+            timeout=10,
+        )
+        hits = resp.json().get("hits", []) if resp.ok else []
+        if hits:
+            h = hits[0]
+            return {
+                "url": h["largeImageURL"],
+                "alt": query,
+                "credit": f"Image by {h['user']} on Pixabay",
+                "source": "pixabay",
+            }
+    except Exception as e:
+        print(f"  ⚠ Pixabay 대표 이미지 오류: {e}")
+    return None
+
+
 def fetch_multiple_images(query: str, count: int = 4) -> list[dict]:
     """
     글 주제에 맞는 무료 이미지 여러 장 검색 (중복 없이)

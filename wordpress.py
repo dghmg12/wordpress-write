@@ -226,47 +226,43 @@ def _make_img_block(image_url: str, alt: str = "", credit: str = None) -> str:
 def _insert_images_into_content(content_html: str, images: list[dict], alt: str = "",
                                 focus_keyword: str = "") -> str:
     """
-    본문 HTML의 각 </h2> 태그 바로 뒤에 이미지를 순서대로 삽입.
-    - 첫 번째 이미지: 포커스 키워드를 alt로 사용 (SEO)
-    - 나머지 이미지: 제목(alt)을 사용
-    이미지가 H2 개수보다 많으면 남은 이미지는 중간 <p> 사이에 삽입.
+    Gutenberg 블록 형식 본문에 이미지 블록 삽입.
+    H2 헤딩 블록(<!-- wp:heading {"level":2} -->) 뒤에 이미지를 순서대로 삽입.
+    남은 이미지는 단락(paragraph) 블록 4개마다 삽입.
     """
     if not images:
         return content_html
 
-    import re
-    parts = re.split(r'(</h2>)', content_html)
-
-    img_idx = 0
+    # 블록 단위로 분리 (Gutenberg 블록은 \n\n으로 구분)
+    blocks = content_html.split('\n\n')
     result = []
-    for part in parts:
-        result.append(part)
-        if part == '</h2>' and img_idx < len(images):
+    img_idx = 0
+
+    for block in blocks:
+        result.append(block)
+        # H2 헤딩 블록 직후에 이미지 삽입 (블록 경계 바깥)
+        if '<!-- wp:heading {"level":2} -->' in block and img_idx < len(images):
             img = images[img_idx]
-            # 첫 번째 이미지에만 포커스 키워드 alt 적용
             img_alt = focus_keyword if (img_idx == 0 and focus_keyword) else alt
-            result.append(_make_img_block(img["url"], alt=img_alt, credit=img.get("credit")))
+            result.append(_make_img_block(img["url"], alt=img_alt, credit=img.get("credit")).strip())
             img_idx += 1
 
-    combined = "".join(result)
-
-    # 남은 이미지는 <p> 태그 4개마다 삽입
+    # 남은 이미지는 paragraph 블록 4개마다 삽입
     if img_idx < len(images):
-        p_parts = re.split(r'(</p>)', combined)
-        p_count = 0
         final = []
-        for part in p_parts:
-            final.append(part)
-            if part == '</p>':
+        p_count = 0
+        for block in result:
+            final.append(block)
+            if '<!-- wp:paragraph -->' in block:
                 p_count += 1
                 if p_count % 4 == 0 and img_idx < len(images):
                     img = images[img_idx]
                     img_alt = focus_keyword if (img_idx == 0 and focus_keyword) else alt
-                    final.append(_make_img_block(img["url"], alt=img_alt, credit=img.get("credit")))
+                    final.append(_make_img_block(img["url"], alt=img_alt, credit=img.get("credit")).strip())
                     img_idx += 1
-        combined = "".join(final)
+        result = final
 
-    return combined
+    return '\n\n'.join(result)
 
 
 def _update_rank_math_meta(wp_url: str, auth, post_id: int, meta: dict):

@@ -31,7 +31,7 @@ def run_full_pipeline(site_cfg: dict, topic: str = "", dry_run: bool = False):
     from crawler import fetch_rss_articles
     from writer import write_article
     from wordpress import publish_post
-    from images import fetch_multiple_images
+    from images import fetch_featured_image, fetch_multiple_images
     from topic_tracker import get_recent_keywords, save_topic
 
     site_key = site_cfg["_key"]
@@ -74,18 +74,21 @@ def run_full_pipeline(site_cfg: dict, topic: str = "", dry_run: bool = False):
     print(f"  SEO 제목: {result.get('seo_title', '-')}")
     print(f"  발췌: {result['excerpt'][:60]}...")
 
-    # Step 2.5: 이미지 검색 (대표 1장 + 본문 3장 = 총 4장)
+    # Step 2.5: 이미지 검색 (대표 1장 별도 + 본문 3장 랜덤)
     image_query = result.get("image_query", topic or result["title"][:20])
-    print(f"\n🖼  [2.5/3] 이미지 검색 중 (키워드: {image_query}, 4장)...")
-    image_list = fetch_multiple_images(image_query, count=4)
-    if image_list:
-        print(f"  이미지 {len(image_list)}장 찾음: {image_list[0]['credit']}")
-        featured_image = image_list[0]      # 첫 번째: 대표 이미지 전용
-        body_images    = image_list[1:]     # 나머지 3장: 본문 삽입용
+    print(f"\n🖼  [2.5/3] 이미지 검색 중 (키워드: {image_query})...")
+
+    # 대표 이미지: 랜덤화 없이 가장 관련성 높은 1장
+    featured_image = fetch_featured_image(image_query)
+    if featured_image:
+        print(f"  대표 이미지: {featured_image['credit']}")
     else:
-        featured_image = None
-        body_images    = []
-        print("  이미지 없이 진행합니다.")
+        print("  대표 이미지 없음")
+
+    # 본문 이미지: 다양성을 위해 랜덤 페이지로 3장
+    body_images = fetch_multiple_images(image_query, count=3)
+    if body_images:
+        print(f"  본문 이미지 {len(body_images)}장 찾음")
 
     # Step 3: WordPress 발행
     if dry_run:
@@ -97,6 +100,8 @@ def run_full_pipeline(site_cfg: dict, topic: str = "", dry_run: bool = False):
             print(f"\n🖼 대표 이미지: {featured_image['credit']}")
         if body_images:
             print(f"🖼 본문 이미지 {len(body_images)}장 준비됨")
+        else:
+            print("  본문 이미지 없음")
         return result
 
     print(f"\n🚀 [3/3] WordPress에 발행 중...")
