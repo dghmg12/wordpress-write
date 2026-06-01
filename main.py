@@ -56,6 +56,7 @@ def run_full_pipeline(site_cfg: dict, topic: str = "", dry_run: bool = False):
     used_keywords = get_recent_keywords(days=30, site=site_key)
     if used_keywords:
         print(f"  최근 30일 사용 키워드 {len(used_keywords)}개 회피 적용")
+    blog_name = site_cfg.get("display_name", "블로그")
     print(f"\n✍️  [2/3] 글 작성 중 (Claude API)...")
     result = write_article(
         articles,
@@ -65,6 +66,7 @@ def run_full_pipeline(site_cfg: dict, topic: str = "", dry_run: bool = False):
         style_desc=site_cfg.get("style_desc", ""),
         link_sources=site_cfg.get("link_sources", []),
         site_label=site_cfg.get("style_hint", ""),
+        blog_name=blog_name,
     )
 
     print(f"\n  제목: {result['title']}")

@@ -16,7 +16,7 @@ def get_client():
 
 def write_article(articles: list[dict], topic: str = "", used_keywords: list[str] = None,
                   style_hint: str = "", style_desc: str = "", link_sources: list = None,
-                  site_label: str = "") -> dict:
+                  site_label: str = "", blog_name: str = "블로그") -> dict:
     """
     수집된 기사들을 바탕으로 Claude API로 블로그 글 생성
 
@@ -152,6 +152,19 @@ def write_article(articles: list[dict], topic: str = "", used_keywords: list[str
   예: "ETF(여러 주식을 한 바구니에 담아 거래소에서 사고파는 펀드)", "LDL 콜레스테롤(혈관 벽에 쌓이는 나쁜 콜레스테롤)"처럼.
   단, 누구나 아는 단어(혈압, 단백질, 금리 등)는 설명 생략.
 
+[대화 구간 - 어려운 내용 쉽게 풀기]
+- 글 중간 내용이 어려워지는 지점에서 아래 형식의 대화 블록을 정확히 1개 삽입한다.
+- 대화는 3~5번 주고받는다. {blog_name}의 말투도 반드시 평어체(~다/~이다)를 유지한다.
+- 독자의 반응은 "엥?", "그게 뭔데?", "그래서?" 같이 짧고 솔직하게.
+- 출력 형식 (반드시 이 대로):
+[CHAT]
+{blog_name}: (설명하는 말)
+독자: (독자의 반응이나 질문)
+{blog_name}: (이어지는 설명)
+독자: (추가 반응)
+{blog_name}: (마무리 설명)
+[/CHAT]
+
 {structure_pattern}
 
 [출처 표기 - 반드시 포함]
@@ -182,10 +195,10 @@ EXCERPT: 150자 이내 한국어 발췌문"""
     )
 
     raw = message.content[0].text
-    return parse_output(raw)
+    return parse_output(raw, blog_name=blog_name)
 
 
-def parse_output(raw: str) -> dict:
+def parse_output(raw: str, blog_name: str = "블로그") -> dict:
     """Claude 출력에서 제목, 본문, 태그, 발췌문, SEO 필드 분리"""
 
     def extract(pattern):
@@ -217,8 +230,8 @@ def parse_output(raw: str) -> dict:
             title = line[2:].strip()
             break
 
-    # Markdown → HTML 변환
-    content_html = markdown_to_html(body)
+    # Markdown → HTML 변환 ([CHAT] 블록 포함)
+    content_html = markdown_to_html(body, blog_name=blog_name)
 
     return {
         "title": title,
@@ -234,11 +247,82 @@ def parse_output(raw: str) -> dict:
     }
 
 
-def markdown_to_html(text: str) -> str:
+def markdown_to_html(text: str, blog_name: str = "블로그") -> str:
     """
     Markdown → WordPress Gutenberg 블록 형식 HTML 변환.
-    각 요소를 독립된 블록으로 만들어 편집 시 개별 수정 가능.
+    [CHAT]...[/CHAT] 블록은 말풍선 대화 형식으로 변환.
     """
+    # [CHAT] 블록 분리 → 각각 다르게 처리
+    segments = re.split(r'(\[CHAT\].*?\[/CHAT\])', text, flags=re.DOTALL)
+
+    all_blocks = []
+    for seg in segments:
+        if seg.startswith('[CHAT]') and '[/CHAT]' in seg:
+            inner = seg[6:seg.index('[/CHAT]')].strip()
+            chat_html = _chat_to_html(inner, blog_name)
+            if chat_html:
+                all_blocks.append(f'<!-- wp:html -->\n{chat_html}\n<!-- /wp:html -->')
+        elif seg.strip():
+            all_blocks.extend(_process_markdown_lines(seg))
+
+    return "\n\n".join(all_blocks)
+
+
+def _chat_to_html(chat_text: str, blog_name: str = "블로그") -> str:
+    """[CHAT] 블록 내용을 말풍선 HTML로 변환.
+    blog_name 발화는 왼쪽(흰 말풍선), 독자 발화는 오른쪽(회색 말풍선).
+    blog_name 글자만 빨간색으로 강조.
+    """
+    lines = [l.strip() for l in chat_text.split('\n') if l.strip()]
+    msgs = []
+    for line in lines:
+        if ':' not in line:
+            continue
+        speaker, _, content = line.partition(':')
+        speaker = speaker.strip()
+        content = content.strip()
+        role = 'blog' if speaker == blog_name else 'reader'
+        msgs.append((role, speaker, content))
+
+    if not msgs:
+        return ''
+
+    rows = []
+    for i, (role, speaker, content) in enumerate(msgs):
+        mb = 'margin-bottom:12px;' if i < len(msgs) - 1 else ''
+        if role == 'blog':
+            rows.append(
+                f'<div style="{mb}display:flex;align-items:flex-start;">'
+                f'<div style="max-width:85%;">'
+                f'<div style="font-size:.75em;font-weight:700;color:#F41414;margin-bottom:3px;">{speaker}</div>'
+                f'<div style="background:#fff;border:1px solid #e5e5e5;'
+                f'border-radius:4px 16px 16px 16px;padding:10px 14px;'
+                f'color:#333;font-size:.95em;line-height:1.65;">{content}</div>'
+                f'</div>'
+                f'</div>'
+            )
+        else:
+            rows.append(
+                f'<div style="{mb}display:flex;justify-content:flex-end;">'
+                f'<div style="max-width:85%;text-align:right;">'
+                f'<div style="font-size:.75em;font-weight:600;color:#aaa;margin-bottom:3px;">{speaker}</div>'
+                f'<div style="background:#f0f0f0;border-radius:16px 4px 16px 16px;'
+                f'padding:10px 14px;color:#333;font-size:.95em;line-height:1.65;">{content}</div>'
+                f'</div>'
+                f'</div>'
+            )
+
+    inner_html = '\n'.join(rows)
+    return (
+        f'<div style="margin:2em 0;padding:18px 20px;background:#f9f9f9;'
+        f'border-radius:16px;border-left:3px solid #F41414;">\n'
+        f'{inner_html}\n'
+        f'</div>'
+    )
+
+
+def _process_markdown_lines(text: str) -> list:
+    """마크다운 텍스트 → Gutenberg 블록 리스트 변환 (markdown_to_html 내부용)"""
     lines = text.split("\n")
     blocks = []
     in_list = False
@@ -290,10 +374,9 @@ def markdown_to_html(text: str) -> str:
             list_items.append(apply_inline(line[2:].strip()))
 
         elif line.strip() == "":
-            pass  # 빈 줄은 블록 구분으로 사용
+            pass
 
         elif line.strip().startswith("<"):
-            # 이미 HTML인 줄 (출처 표기, 인라인 링크 단락 등) → Custom HTML 블록
             blocks.append(f'<!-- wp:html -->\n{line.strip()}\n<!-- /wp:html -->')
 
         else:
@@ -306,7 +389,7 @@ def markdown_to_html(text: str) -> str:
     if in_list:
         close_list()
 
-    return "\n\n".join(blocks)
+    return blocks
 
 
 def apply_inline(text: str) -> str:

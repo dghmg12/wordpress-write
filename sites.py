@@ -10,6 +10,7 @@ sites.py - 멀티 사이트 설정 관리
 SITES = {
     "health": {
         "name": "blacknudge (건강/운동/식단)",
+        "display_name": "블랙넛지",
         # WordPress 연결 (env 변수명)
         "wp_url_env":  "WP_URL",
         "wp_user_env": "WP_USER",
@@ -46,6 +47,7 @@ SITES = {
 
     "economy": {
         "name": "newbicon (경제/부동산/투자)",
+        "display_name": "뉴비콘",
         # WordPress 연결
         "wp_url_env":  "WP2_URL",
         "wp_user_env": "WP2_USER",
