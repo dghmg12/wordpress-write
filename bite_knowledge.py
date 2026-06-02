@@ -11,7 +11,7 @@ from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
 load_dotenv()
 
-from images import fetch_multiple_images
+from images import fetch_featured_image
 from wordpress import upload_image_from_url
 from topic_tracker import get_recent_keywords, save_topic
 
@@ -46,7 +46,11 @@ def post_bite_knowledge():
 본문 내용 먼저 작성
 
 TITLE: 용어명
-IMAGE_QUERY: english 2-3 words
+IMAGE_QUERY: 이 용어의 핵심 개념을 시각적으로 표현하는 영어 3~5단어. 추상적 단어 금지, 실제 이미지로 검색 가능한 구체적 장면/사물/상황으로.
+  예시) 금리 상승 → "interest rate rising coins bank"
+       주식 PER → "stock market graph valuation analysis"
+       부동산 전세 → "apartment building rental contract keys"
+       인플레이션 → "shopping cart grocery price rising"
 TAGS: 태그1,태그2,태그3,태그4"""
 
     print("  Claude API 호출 중 (한 입 지식)...")
@@ -89,9 +93,9 @@ TAGS: 태그1,태그2,태그3,태그4"""
 
     print(f"  용어: {term_title} / {len(body)}자")
 
-    # 이미지
-    imgs = fetch_multiple_images(image_query or 'finance money economy', count=1)
-    featured_url = imgs[0]['url'] if imgs else None
+    # 이미지 (관련성 높은 1장 - 랜덤화 없이 page 1 결과)
+    img = fetch_featured_image(image_query or 'finance economy investment concept')
+    featured_url = img['url'] if img else None
 
     # WP 설정
     wp_env = {
