@@ -183,7 +183,11 @@ def write_article(articles: list[dict], topic: str = "", used_keywords: list[str
 FOCUS_KEYWORD: 포커스키워드(2~4단어, 핵심 검색어 하나만)
 SEO_TITLE: SEO 최적화 제목(60자 이내, 포커스 키워드 앞쪽 배치)
 SEO_DESCRIPTION: 메타 설명(150~160자, 포커스 키워드 포함, 클릭 유도 문장)
-IMAGE_QUERY: 영어 이미지 검색어(2~3 English words for Pexels/Pixabay)
+IMAGE_QUERY: 글 핵심 장면을 시각적으로 표현하는 영어 3~5단어. 추상어 금지, Pexels/Pixabay에서 실제로 검색 가능한 구체적 사물·행동·장면으로.
+  예) 운동 루틴 글 → "person morning workout routine stretch"
+      식단 관리 글 → "healthy meal prep vegetables bowl"
+      부동산 투자 글 → "apartment building investment real estate"
+      금리 인상 글 → "bank interest rate financial graph"
 TAGS: 태그1,태그2,태그3,태그4,태그5
 EXCERPT: 150자 이내 한국어 발췌문"""
 
