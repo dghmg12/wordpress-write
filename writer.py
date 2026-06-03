@@ -326,7 +326,7 @@ def _chat_to_html(chat_text: str, blog_name: str = "블로그") -> str:
     inner_html = '\n'.join(rows)
     return (
         f'<div style="margin:2em 0;padding:18px 20px;background:#f9f9f9;'
-        f'border-radius:16px;border-left:3px solid #F41414;">\n'
+        f'border-radius:16px;border:1px solid #F41414;">\n'
         f'{inner_html}\n'
         f'</div>'
     )
