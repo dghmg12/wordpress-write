@@ -108,7 +108,7 @@ def publish_post(
 
     # 기본값 처리
     if status is None:
-        status = os.environ.get("WP_STATUS", "publish")
+        status = os.environ.get("WP_STATUS", "draft")
     if category_id is None:
         cat_env = os.environ.get("WP_CATEGORY_ID", "")
         category_id = int(cat_env) if cat_env.isdigit() else None
