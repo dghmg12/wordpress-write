@@ -1,11 +1,11 @@
 """
 run_daily.py - 매일 자동 실행 스크립트
-  - blacknudge: 건강/운동/식단 중 2개 랜덤
-  - newbicon:   경제/부동산/투자 중 2개 랜덤
-  - newbicon:   한 입 지식 1개 (매일 고정)
+  - 실행 조건: 월~금요일만 (주말 자동 스킵)
+  - blacknudge: 생활속 잡학 1개 (임시글)
+  - newbicon:   우주과학 1개 (임시글)
 
 실행: py run_daily.py
-스케줄: 매일 오전 8시 (Windows 작업 스케줄러)
+스케줄: 월~금 오전 8시 (GitHub Actions / Windows 작업 스케줄러)
 """
 import sys
 import os
@@ -48,47 +48,40 @@ def run_site(site_key: str, topic: str):
 
 def main():
     now = datetime.now(KST)
+
+    # ── 주말 체크 (0=월 ... 6=일)
+    weekday = now.weekday()
+    if weekday >= 5:
+        day_names = {5: '토요일', 6: '일요일'}
+        logging.info(f'오늘은 {day_names[weekday]} → 자동 포스팅 없음 (월~금만 실행)')
+        return
+
+    day_names = ['월', '화', '수', '목', '금']
     logging.info('=' * 52)
-    logging.info(f'  일일 자동 포스팅 시작: {now.strftime("%Y-%m-%d %H:%M")} KST')
+    logging.info(f'  일일 자동 포스팅 시작: {now.strftime("%Y-%m-%d")} ({day_names[weekday]}) KST')
     logging.info('=' * 52)
 
     results = []
 
-    # ── blacknudge: 건강/운동/식단 중 2개 ──────────────────
-    health_pool = ['건강', '운동', '식단']
-    health_picks = random.sample(health_pool, 2)
-    logging.info(f'\n[blacknudge] 오늘 주제: {health_picks}')
-
-    for topic in health_picks:
-        try:
-            run_site('health', topic)
-            results.append(f'blacknudge/{topic} ✅')
-        except Exception as e:
-            logging.error(f'  ❌ blacknudge/{topic} 오류: {e}')
-            results.append(f'blacknudge/{topic} ❌')
-
-    # ── newbicon: 경제/부동산/투자 중 2개 ──────────────────
-    economy_pool = ['경제', '부동산', '투자']
-    economy_picks = random.sample(economy_pool, 2)
-    logging.info(f'\n[newbicon] 오늘 주제: {economy_picks}')
-
-    for topic in economy_picks:
-        try:
-            run_site('economy', topic)
-            results.append(f'newbicon/{topic} ✅')
-        except Exception as e:
-            logging.error(f'  ❌ newbicon/{topic} 오류: {e}')
-            results.append(f'newbicon/{topic} ❌')
-
-    # ── 한 입 지식 (매일 고정) ──────────────────────────────
-    logging.info('\n[한 입 지식] 경제 용어 포스팅...')
+    # ── blacknudge: 생활속 잡학 1개 ───────────────────────
+    logging.info('\n[잡학] 블랙넛지 잡학 포스팅...')
     try:
-        from bite_knowledge import post_bite_knowledge
-        post_bite_knowledge()
-        results.append('한 입 지식 ✅')
+        from trivia import post_trivia
+        post_trivia()
+        results.append('블랙넛지/잡학 ✅')
     except Exception as e:
-        logging.error(f'  ❌ 한 입 지식 오류: {e}')
-        results.append('한 입 지식 ❌')
+        logging.error(f'  ❌ 블랙넛지/잡학 오류: {e}')
+        results.append('블랙넛지/잡학 ❌')
+
+    # ── newbicon: 우주과학 1개 (매일 고정) ────────────────
+    logging.info('\n[우주과학] 뉴비콘 우주과학 포스팅...')
+    try:
+        from space import post_space
+        post_space()
+        results.append('뉴비콘/우주과학 ✅')
+    except Exception as e:
+        logging.error(f'  ❌ 뉴비콘/우주과학 오류: {e}')
+        results.append('뉴비콘/우주과학 ❌')
 
     # ── 최종 요약 ───────────────────────────────────────────
     end = datetime.now(KST)

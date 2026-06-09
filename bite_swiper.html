@@ -1,0 +1,503 @@
+<!-- 한 입 지식 카드 스와이퍼 + 검색 -->
+<div id="bk-wrap">
+
+  <!-- 검색창 -->
+  <div id="bk-search-wrap">
+    <span id="bk-search-icon">🔍</span>
+    <input type="text" id="bk-search" placeholder="용어 검색..." autocomplete="off" spellcheck="false">
+    <button id="bk-search-clear" aria-label="검색 지우기">✕</button>
+  </div>
+
+  <!-- 카드 뷰포트 -->
+  <div id="bk-viewport">
+    <div id="bk-track"></div>
+  </div>
+
+  <!-- 네비게이션 -->
+  <div id="bk-nav">
+    <button class="bk-btn" id="bk-prev" aria-label="이전">&#8592;</button>
+    <span id="bk-counter"></span>
+    <button class="bk-btn" id="bk-next" aria-label="다음">&#8594;</button>
+  </div>
+
+</div>
+
+<style>
+#bk-wrap {
+  max-width: 520px;
+  margin: 0 auto 2em;
+  font-family: inherit;
+}
+
+/* ── 검색창 ── */
+#bk-search-wrap {
+  position: relative;
+  margin-bottom: 14px;
+}
+#bk-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1em;
+  pointer-events: none;
+  line-height: 1;
+}
+#bk-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 40px 11px 40px;
+  border: 2px solid #e0e0e0;
+  border-radius: 28px;
+  font-size: .95em;
+  color: #333;
+  background: #fff;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  -webkit-appearance: none;
+}
+#bk-search:focus {
+  border-color: #F41414;
+  box-shadow: 0 0 0 3px rgba(244,20,20,.08);
+}
+#bk-search::placeholder { color: #bbb; }
+#bk-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #eee;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: .75em;
+  color: #888;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background .15s;
+}
+#bk-search-clear:hover { background: #ddd; color: #555; }
+#bk-search-clear.visible { display: flex; }
+
+/* ── 뷰포트 / 트랙 ── */
+#bk-viewport {
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 4px 28px rgba(0,0,0,.13);
+  background: #fff;
+  cursor: grab;
+  user-select: none;
+}
+#bk-viewport:active { cursor: grabbing; }
+
+#bk-track {
+  display: flex;
+  transition: transform .38s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
+}
+
+/* ── 카드 ── */
+.bk-card {
+  min-width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+}
+.bk-card-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+  border-radius: 20px 20px 0 0;
+}
+.bk-card-body {
+  padding: 22px 26px 24px;
+}
+.bk-card-body p[style*="F41414"] {
+  font-size: .85em !important;
+  font-weight: 700 !important;
+  color: #F41414 !important;
+  margin: 0 0 4px !important;
+}
+.bk-card-body h1 {
+  font-size: 1.55em !important;
+  font-weight: 800 !important;
+  margin: .2em 0 .8em !important;
+  color: #111 !important;
+  line-height: 1.25 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-bottom: none !important;
+}
+.bk-card-body p {
+  font-size: .95em;
+  line-height: 1.85;
+  color: #333;
+  margin: 0 0 .6em;
+}
+.bk-card-body p[style*="aaa"] {
+  font-size: .8em !important;
+  color: #bbb !important;
+  margin-top: 12px !important;
+  margin-bottom: 0 !important;
+}
+
+/* ── 검색 결과 없음 ── */
+.bk-empty {
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 3em 2em;
+  text-align: center;
+  color: #bbb;
+  font-size: .95em;
+  line-height: 1.8;
+}
+.bk-empty strong { display: block; font-size: 2em; margin-bottom: .3em; }
+
+/* ── 네비게이션 ── */
+#bk-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.bk-btn {
+  background: #fff;
+  border: 2px solid #ccc;       /* 항상 보이도록 기존 #e0e0e0보다 진하게 */
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  font-size: 1.15em;
+  color: #555;                  /* 기본 화살표 색 명시 */
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);  /* 살짝 그림자로 구분감 */
+}
+.bk-btn:hover:not(:disabled) {
+  border-color: #F41414;
+  color: #F41414;
+  box-shadow: 0 2px 8px rgba(244,20,20,.15);
+}
+.bk-btn:disabled { opacity: .25; cursor: default; box-shadow: none; }
+
+#bk-counter {
+  font-size: .85em;
+  color: #aaa;
+  min-width: 54px;
+  text-align: center;
+  letter-spacing: .02em;
+}
+#bk-counter.searching { color: #F41414; font-weight: 600; }
+
+/* 자동 재생 중 진행 바 */
+#bk-progress {
+  height: 3px;
+  background: #f0f0f0;
+  border-radius: 0 0 20px 20px;
+  overflow: hidden;
+  margin-top: -1px;
+}
+#bk-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #F41414;
+  transition: width linear;
+}
+</style>
+
+<script>
+(function () {
+  var AUTOPLAY_DELAY = 3000;   /* 자동 롤링 간격 (ms) */
+
+  var allPosts = [];
+  var posts    = [];
+  var cur      = 0;
+  var autoTimer    = null;
+  var searchTimer  = null;
+  var progTimer    = null;
+
+  var track      = document.getElementById('bk-track');
+  var counter    = document.getElementById('bk-counter');
+  var prevBtn    = document.getElementById('bk-prev');
+  var nextBtn    = document.getElementById('bk-next');
+  var searchEl   = document.getElementById('bk-search');
+  var clearBtn   = document.getElementById('bk-search-clear');
+  var vp         = document.getElementById('bk-viewport');
+
+  /* 진행 바 DOM 삽입 */
+  var progressWrap = document.createElement('div');
+  progressWrap.id  = 'bk-progress';
+  var progressBar  = document.createElement('div');
+  progressBar.id   = 'bk-progress-bar';
+  progressWrap.appendChild(progressBar);
+  vp.parentNode.insertBefore(progressWrap, vp.nextSibling);
+
+  /* ── 유틸 ── */
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function getFeaturedImg(p) {
+    try {
+      var media = p._embedded['wp:featuredmedia'];
+      if (media && media[0] && media[0].source_url) {
+        return { src: media[0].source_url, alt: media[0].alt_text || '' };
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function stripHtml(html) {
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  }
+
+  /* ── 자동 재생 ── */
+  function startAutoplay() {
+    stopAutoplay();
+    if (!posts.length || searchEl.value) return;  /* 검색 중엔 자동 재생 안 함 */
+    startProgress();
+    autoTimer = setTimeout(function () {
+      go(1);
+      startAutoplay();
+    }, AUTOPLAY_DELAY);
+  }
+
+  function stopAutoplay() {
+    clearTimeout(autoTimer);
+    clearTimeout(progTimer);
+    autoTimer = null;
+    resetProgress();
+  }
+
+  function startProgress() {
+    resetProgress();
+    /* 다음 프레임에서 transition 시작 */
+    progTimer = setTimeout(function () {
+      progressBar.style.transition = 'width ' + AUTOPLAY_DELAY + 'ms linear';
+      progressBar.style.width = '100%';
+    }, 30);
+  }
+
+  function resetProgress() {
+    progressBar.style.transition = 'none';
+    progressBar.style.width = '0%';
+  }
+
+  /* ── 검색 필터 ── */
+  function applySearch(q) {
+    if (!q) {
+      posts = allPosts.slice();
+    } else {
+      var lower = q.toLowerCase();
+      posts = allPosts.filter(function (p) {
+        var t = stripHtml(p.title.rendered).toLowerCase();
+        var c = stripHtml(p.content.rendered).toLowerCase();
+        return t.indexOf(lower) !== -1 || c.indexOf(lower) !== -1;
+      });
+    }
+    cur = 0;
+    render(!!q);
+    if (!q) startAutoplay(); else stopAutoplay();
+  }
+
+  /* ── 렌더링 ── */
+  function render(isSearching) {
+    track.innerHTML = '';
+
+    if (!posts.length) {
+      var empty = document.createElement('div');
+      empty.className = 'bk-empty';
+      empty.innerHTML = '<strong>🔍</strong>검색 결과가 없어요.<br>' +
+        '<span style="font-size:.85em;color:#ddd;">"' + searchEl.value + '"</span>';
+      track.appendChild(empty);
+      counter.textContent = '0 / 0';
+      counter.className = 'searching';
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      return;
+    }
+
+    posts.forEach(function (p) {
+      var card = document.createElement('div');
+      card.className = 'bk-card';
+      var img = getFeaturedImg(p);
+      var imgHtml = img
+        ? '<img class="bk-card-img" src="' + img.src + '" alt="' + img.alt + '" loading="lazy">'
+        : '';
+      card.innerHTML = imgHtml +
+        '<div class="bk-card-body">' + p.content.rendered + '</div>';
+      track.appendChild(card);
+    });
+
+    update(isSearching);
+  }
+
+  function update(isSearching) {
+    track.style.transition = 'none';
+    track.style.transform  = 'translateX(-' + (cur * 100) + '%)';
+    track.getBoundingClientRect();
+    track.style.transition = 'transform .38s cubic-bezier(.4,0,.2,1)';
+
+    setCounter(isSearching);
+    prevBtn.disabled = false;
+    nextBtn.disabled = false;
+  }
+
+  function setCounter(isSearching) {
+    if (isSearching) {
+      counter.textContent = (posts.length ? (cur + 1) : 0) + ' / ' + posts.length + ' 검색';
+      counter.className = 'searching';
+    } else {
+      counter.textContent = (cur + 1) + ' / ' + posts.length;
+      counter.className = '';
+    }
+  }
+
+  /* ── 이동 (무한 루프) ── */
+  function go(dir) {
+    if (!posts.length) return;
+    var isWrap = (dir > 0 && cur === posts.length - 1) ||
+                 (dir < 0 && cur === 0);
+    cur = (cur + dir + posts.length) % posts.length;
+
+    if (isWrap) {
+      track.style.transition = 'none';
+      track.style.transform  = 'translateX(-' + (cur * 100) + '%)';
+      track.getBoundingClientRect();
+      track.style.transition = 'transform .38s cubic-bezier(.4,0,.2,1)';
+    } else {
+      track.style.transform = 'translateX(-' + (cur * 100) + '%)';
+    }
+    setCounter(!!searchEl.value);
+  }
+
+  prevBtn.addEventListener('click', function () {
+    stopAutoplay();
+    go(-1);
+    startAutoplay();
+  });
+  nextBtn.addEventListener('click', function () {
+    stopAutoplay();
+    go(1);
+    startAutoplay();
+  });
+
+  /* ── 검색 이벤트 ── */
+  searchEl.addEventListener('input', function () {
+    var q = searchEl.value.trim();
+    clearBtn.classList.toggle('visible', q.length > 0);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () { applySearch(q); }, 150);
+  });
+
+  clearBtn.addEventListener('click', function () {
+    searchEl.value = '';
+    clearBtn.classList.remove('visible');
+    applySearch('');
+    searchEl.focus();
+  });
+
+  /* ── 호버 → 자동 재생 일시 정지 ── */
+  vp.addEventListener('mouseenter', function () { stopAutoplay(); });
+  vp.addEventListener('mouseleave', function () { startAutoplay(); });
+
+  /* ── 터치 스와이프 ── */
+  var sx = 0, dragging = false;
+
+  vp.addEventListener('touchstart', function (e) {
+    stopAutoplay();
+    sx = e.touches[0].clientX;
+    dragging = true;
+  }, { passive: true });
+
+  vp.addEventListener('touchmove', function (e) {
+    if (dragging && Math.abs(sx - e.touches[0].clientX) > 10) e.preventDefault();
+  }, { passive: false });
+
+  vp.addEventListener('touchend', function (e) {
+    if (!dragging) return;
+    var dx = sx - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 50) go(dx > 0 ? 1 : -1);
+    dragging = false;
+    startAutoplay();
+  }, { passive: true });
+
+  /* ── 마우스 드래그 ── */
+  vp.addEventListener('mousedown', function (e) {
+    stopAutoplay();
+    sx = e.clientX;
+    dragging = true;
+    e.preventDefault();
+  });
+  window.addEventListener('mouseup', function (e) {
+    if (!dragging) return;
+    var dx = sx - e.clientX;
+    if (Math.abs(dx) > 60) go(dx > 0 ? 1 : -1);
+    dragging = false;
+    startAutoplay();
+  });
+
+  /* ── 키보드 ── */
+  document.addEventListener('keydown', function (e) {
+    if (document.activeElement === searchEl) return;
+    if (e.key === 'ArrowLeft')  { stopAutoplay(); go(-1); startAutoplay(); }
+    if (e.key === 'ArrowRight') { stopAutoplay(); go(1);  startAutoplay(); }
+  });
+
+  /* ── REST API 호출 ── */
+  var apiUrl = window.location.origin +
+    '/wp-json/wp/v2/posts?categories=37&per_page=100&_embed';
+
+  fetch(apiUrl)
+    .then(function (r) {
+      if (!r.ok) {
+        return r.text().then(function (t) {
+          throw new Error('HTTP ' + r.status + ' | ' + t.slice(0, 120));
+        });
+      }
+      var ct = r.headers.get('content-type') || '';
+      if (!ct.includes('json')) {
+        return r.text().then(function (t) {
+          throw new Error('JSON이 아닌 응답 (' + ct + '): ' + t.slice(0, 120));
+        });
+      }
+      return r.json();
+    })
+    .then(function (data) {
+      if (!Array.isArray(data) || !data.length) {
+        track.innerHTML =
+          '<div class="bk-empty"><strong>📭</strong>아직 등록된 경제 용어가 없습니다.</div>';
+        counter.textContent = '0 / 0';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
+      }
+      allPosts = shuffle(data);
+      posts    = allPosts.slice();
+      render(false);
+      startAutoplay();
+    })
+    .catch(function (err) {
+      console.error('한 입 지식 로드 오류 ―', err.message);
+      track.innerHTML =
+        '<div class="bk-empty"><strong>⚠️</strong>불러오는 중 오류가 발생했습니다.</div>';
+    });
+})();
+</script>

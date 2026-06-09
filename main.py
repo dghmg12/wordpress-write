@@ -46,9 +46,18 @@ def run_full_pipeline(site_cfg: dict, topic: str = "", dry_run: bool = False):
     print(f"  주제: {topic}")
     print(f"{'='*50}\n")
 
-    # Step 1: 크롤링 (사이트별 RSS 피드)
-    print("📰 [1/3] 기사 수집 중...")
+    # Step 1: 크롤링 (RSS 뉴스 + 커뮤니티 경험담)
+    print("📰 [1/3] 기사·커뮤니티 글 수집 중...")
     articles = fetch_rss_articles(max_per_feed=5, feeds=site_cfg["rss_feeds"])
+
+    # 커뮤니티 소스 (실제 경험담) 병합
+    community_sources = site_cfg.get("community_sources", [])
+    if community_sources:
+        from crawler import fetch_community_posts
+        community_posts = fetch_community_posts(community_sources, max_per_site=2)
+        articles = articles + community_posts
+        print(f"  뉴스 {len(articles) - len(community_posts)}개 + 커뮤니티 {len(community_posts)}개 = 총 {len(articles)}개")
+
     if not articles:
         print("  ⚠ 수집된 기사가 없습니다. 주제만으로 글을 작성합니다.")
 

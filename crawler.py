@@ -116,6 +116,145 @@ def fetch_article_body(url: str, max_chars: int = 2000) -> str:
     return ""
 
 
+def fetch_community_posts(community_sources: list, max_per_site: int = 3) -> list[dict]:
+    """
+    커뮤니티 사이트에서 최근 게시글 수집 (실제 경험담·토론)
+
+    community_sources: [
+        {"name": "...", "url": "...", "type": "clien"|"ppomppu"|"rss"}
+    ]
+    """
+    posts = []
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": "https://www.google.com/",
+    }
+
+    for src in community_sources:
+        site_name = src.get("name", src["url"])
+        src_type  = src.get("type", "rss")
+        url       = src["url"]
+
+        try:
+            print(f"  커뮤니티 수집 중: {site_name}")
+
+            if src_type == "rss":
+                # ── RSS 방식 (일반) ──
+                feed = feedparser.parse(url)
+                count = 0
+                for entry in feed.entries:
+                    if count >= max_per_site:
+                        break
+                    title   = entry.get("title", "").strip()
+                    link    = entry.get("link", "").strip()
+                    summary = BeautifulSoup(
+                        entry.get("summary", entry.get("description", "")),
+                        "html.parser",
+                    ).get_text()[:350].strip()
+                    if title:
+                        posts.append({
+                            "title":  title,
+                            "url":    link,
+                            "summary": summary or title,
+                            "source": f"[커뮤니티] {site_name}",
+                        })
+                        count += 1
+
+            elif src_type == "clien":
+                # ── 클리앙 게시판 스크래핑 ──
+                resp = requests.get(url, headers=headers, timeout=12)
+                resp.raise_for_status()
+                soup = BeautifulSoup(resp.text, "html.parser")
+
+                # 클리앙 구조: div.list_item > span.list_subject > a
+                rows = soup.select("div.list_item span.list_subject a")
+                count = 0
+                for a_tag in rows:
+                    if count >= max_per_site:
+                        break
+                    title = a_tag.get_text(strip=True)
+                    href  = a_tag.get("href", "")
+                    if not title or not href:
+                        continue
+                    # 공지 / 광고 등 짧은 제목 스킵
+                    if len(title) < 5:
+                        continue
+                    if href.startswith("/"):
+                        href = "https://www.clien.net" + href.split("?")[0]
+
+                    body = _fetch_clien_body(href, headers)
+                    posts.append({
+                        "title":  title,
+                        "url":    href,
+                        "summary": body or title,
+                        "source": f"[커뮤니티] {site_name}",
+                    })
+                    count += 1
+
+            elif src_type == "ppomppu":
+                # ── 뽐뿌 게시판 스크래핑 ──
+                resp = requests.get(url, headers=headers, timeout=12)
+                resp.raise_for_status()
+                soup = BeautifulSoup(resp.text, "html.parser")
+
+                # 뽐뿌 구조: table#bbsList tr > td.baseList-title > a
+                rows = soup.select("table#bbsList tr td.baseList-title a")
+                if not rows:
+                    # 다른 선택자 시도
+                    rows = soup.select("tr.baseList-even td a, tr.baseList-odd td a")
+
+                count = 0
+                for a_tag in rows:
+                    if count >= max_per_site:
+                        break
+                    title = a_tag.get_text(strip=True)
+                    href  = a_tag.get("href", "")
+                    if not title or len(title) < 5:
+                        continue
+                    if href.startswith("/"):
+                        href = "https://www.ppomppu.co.kr" + href
+
+                    body = fetch_article_body(href, max_chars=350)
+                    posts.append({
+                        "title":  title,
+                        "url":    href,
+                        "summary": body or title,
+                        "source": f"[커뮤니티] {site_name}",
+                    })
+                    count += 1
+
+        except Exception as e:
+            print(f"  ⚠ 커뮤니티 수집 실패 ({site_name}): {e}")
+
+    print(f"  커뮤니티 게시글 총 {len(posts)}개 수집")
+    return posts
+
+
+def _fetch_clien_body(url: str, headers: dict) -> str:
+    """클리앙 게시글 본문 텍스트 추출"""
+    try:
+        resp = requests.get(url, headers=headers, timeout=8)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        # 클리앙 본문: div.post_content
+        body_el = soup.select_one("div.post_content")
+        if body_el:
+            for tag in body_el(["img", "video", "iframe", "script", "style"]):
+                tag.decompose()
+            lines = [l.strip() for l in body_el.get_text(separator="\n").splitlines() if l.strip()]
+            return " ".join(lines)[:400]
+    except Exception:
+        pass
+    return ""
+
+
 if __name__ == "__main__":
     # 테스트 실행
     from dotenv import load_dotenv

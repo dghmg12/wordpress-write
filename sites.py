@@ -43,6 +43,12 @@ SITES = {
             ("대한의사협회", "https://www.kma.org"),
             ("서울대학교병원", "https://www.snuh.org"),
         ],
+        # 커뮤니티 소스 (실제 경험담·토론글)
+        "community_sources": [
+            {"name": "클리앙 운동/스포츠",  "url": "https://www.clien.net/service/board/cm_sports", "type": "clien"},
+            {"name": "클리앙 건강",          "url": "https://www.clien.net/service/board/cm_health", "type": "clien"},
+            {"name": "뽐뿌 건강/다이어트",   "url": "https://www.ppomppu.co.kr/zboard.php?id=diet_health", "type": "ppomppu"},
+        ],
     },
 
     "economy": {
@@ -79,6 +85,12 @@ SITES = {
             ("국토교통부", "https://www.molit.go.kr"),
             ("KB부동산", "https://kbland.kr"),
             ("한국부동산원", "https://www.reb.or.kr"),
+        ],
+        # 커뮤니티 소스 (실제 경험담·토론글)
+        "community_sources": [
+            {"name": "클리앙 재테크",       "url": "https://www.clien.net/service/board/cm_stock",   "type": "clien"},
+            {"name": "클리앙 부동산",       "url": "https://www.clien.net/service/board/cm_realty",  "type": "clien"},
+            {"name": "뽐뿌 재테크",         "url": "https://www.ppomppu.co.kr/zboard.php?id=finance", "type": "ppomppu"},
         ],
     },
 }
