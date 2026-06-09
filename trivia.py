@@ -14,7 +14,7 @@ load_dotenv()
 from writer import parse_output
 from wordpress import publish_post
 from images import fetch_featured_image, fetch_multiple_images
-from topic_tracker import get_recent_keywords, save_topic
+from topic_tracker import get_recent_keywords, get_recent_titles, save_topic
 
 # ★ blacknudge '잡학' 카테고리 ID — WordPress 관리자 → 카테고리에서 확인 후 입력
 CATEGORY_ID = None
@@ -77,8 +77,16 @@ def post_trivia():
     trivia_type = _get_next_type()
     print(f"  오늘의 잡학 유형: [{trivia_type} 잡학]")
 
-    used = get_recent_keywords(days=60, site='health_trivia')
-    avoid_str = ', '.join(used[-30:]) if used else '없음'
+    keywords = get_recent_keywords(days=60, site='health_trivia')
+    titles   = get_recent_titles(days=60, site='health_trivia')
+    avoid_lines = []
+    if keywords:
+        avoid_lines.append('최근 키워드: ' + ', '.join(keywords[-30:]))
+    if titles:
+        avoid_lines.append('최근 제목 (이 주제들과 겹치거나 의미상 비슷한 것 금지):')
+        for t in titles[-20:]:
+            avoid_lines.append(f'  - {t}')
+    avoid_str = '\n'.join(avoid_lines) if avoid_lines else '없음'
 
     # 도입부 스타일 랜덤
     intro_styles = [

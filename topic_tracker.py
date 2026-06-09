@@ -58,11 +58,20 @@ def get_recent_keywords(days: int = 30, site: str = None) -> list[str]:
     return result
 
 
-def get_recent_titles(days: int = 30) -> list[str]:
-    """최근 N일 내 발행된 제목 목록 반환"""
+def get_recent_titles(days: int = 30, site: str = None) -> list[str]:
+    """최근 N일 내 발행된 제목 목록 반환 (사이트별 필터 가능)"""
     topics = load_used_topics()
     cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    return [t["title"] for t in topics if t.get("date", "") >= cutoff and t.get("title")]
+    result = []
+    for t in topics:
+        if t.get("date", "") < cutoff:
+            continue
+        if site and t.get("site", "health") != site:
+            continue
+        title = t.get("title", "")
+        if title and title != "자동 생성 포스트":
+            result.append(title)
+    return result
 
 
 if __name__ == "__main__":

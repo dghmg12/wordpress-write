@@ -21,12 +21,26 @@ load_dotenv()
 from writer import parse_output
 from wordpress import publish_post
 from images import fetch_featured_image, fetch_multiple_images
-from topic_tracker import get_recent_keywords, save_topic
+from topic_tracker import get_recent_keywords, get_recent_titles, save_topic
 
 # ★ newbicon '우주과학' 카테고리 ID — WordPress 관리자 → 카테고리에서 확인 후 입력
 CATEGORY_ID = None
 
 BLOG_NAME = '뉴비콘'
+
+
+def _build_avoid_str(days: int = 60) -> str:
+    """최근 발행된 키워드+제목을 함께 반환해 중복 방지"""
+    keywords = get_recent_keywords(days=days, site='newbicon_space')
+    titles   = get_recent_titles(days=days, site='newbicon_space')
+    lines = []
+    if keywords:
+        lines.append('최근 키워드: ' + ', '.join(keywords[-30:]))
+    if titles:
+        lines.append('최근 제목 (이 주제들과 겹치거나 의미상 비슷한 것 금지):')
+        for t in titles[-20:]:
+            lines.append(f'  - {t}')
+    return '\n'.join(lines) if lines else '없음'
 
 WP_ENV = {
     'wp_url_env':  'WP2_URL',
@@ -177,8 +191,7 @@ def _post_space_news():
     for i, n in enumerate(news, 1):
         news_text += f"\n[뉴스 {i}]\n제목: {n['title']}\n출처: {n['source']}\nURL: {n['url']}\n내용: {n['summary']}\n"
 
-    used = get_recent_keywords(days=60, site='newbicon_space')
-    avoid_str = ', '.join(used[-20:]) if used else '없음'
+    avoid_str = _build_avoid_str(days=60)
     chat_instruction = _build_chat_instruction()
 
     prompt = f"""아래 최신 우주 뉴스들을 참고해서 한국어 블로그 글을 써라.
@@ -372,8 +385,7 @@ def _post_space_industry():
     print("  🚀 우주산업 뉴스 수집 중...")
     news = _fetch_industry_news()
 
-    used = get_recent_keywords(days=60, site='newbicon_space')
-    avoid_str = ', '.join(used[-20:]) if used else '없음'
+    avoid_str = _build_avoid_str(days=60)
     chat_instruction = _build_chat_instruction()
 
     if news:
@@ -443,8 +455,7 @@ def _post_space_industry():
 # ── 잡학 기반 글 ──────────────────────────────────────────
 def _post_space_trivia():
     """우주과학 호기심 잡학 글 작성"""
-    used = get_recent_keywords(days=60, site='newbicon_space')
-    avoid_str = ', '.join(used[-30:]) if used else '없음'
+    avoid_str = _build_avoid_str(days=60)
 
     intro_styles = [
         '1인칭 경험담으로 시작 ("어릴 때 밤하늘을 보다가", "뉴스에서 봤는데", "문득 궁금해졌다" 등)',
@@ -519,8 +530,7 @@ def _post_ai_news():
     print("  🤖 AI/반도체 최신 뉴스 수집 중...")
     news = _fetch_ai_news(AI_NEWS_FEEDS)
 
-    used = get_recent_keywords(days=60, site='newbicon_space')
-    avoid_str = ', '.join(used[-20:]) if used else '없음'
+    avoid_str = _build_avoid_str(days=60)
     chat_instruction = _build_chat_instruction()
 
     if not news:
@@ -600,8 +610,7 @@ def _post_ai_trend():
     print("  💡 AI/반도체 트렌드 뉴스 수집 중...")
     news = _fetch_ai_news(AI_TREND_FEEDS)
 
-    used = get_recent_keywords(days=60, site='newbicon_space')
-    avoid_str = ', '.join(used[-20:]) if used else '없음'
+    avoid_str = _build_avoid_str(days=60)
     chat_instruction = _build_chat_instruction()
 
     if news:
