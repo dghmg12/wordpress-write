@@ -2,9 +2,10 @@
 images.py - 무료 이미지 검색 및 다운로드 모듈
 
 지원 소스:
+  0. NASA Image Library (API 키 불필요, 우주 관련 글 우선 사용)
   1. Pexels API (PEXELS_API_KEY 필요, 무료 등록)
   2. Pixabay API (PIXABAY_API_KEY 필요, 무료 등록)
-  3. 둘 다 없으면 이미지 건너뜀
+  3. 모두 없으면 이미지 건너뜀
 
 API 키 발급:
   Pexels  → https://www.pexels.com/api/
@@ -24,11 +25,16 @@ def fetch_image(query: str) -> dict | None:
     return results[0] if results else None
 
 
-def fetch_featured_image(query: str) -> dict | None:
+def fetch_featured_image(query: str, nasa: bool = False) -> dict | None:
     """
     대표 이미지 전용 검색 - 랜덤화 없이 가장 관련성 높은 이미지 1개 반환.
-    본문 이미지와 달리 page=1, 셔플 없음 → 글 주제와 가장 잘 맞는 결과.
+    nasa=True 이면 NASA 이미지 라이브러리를 가장 먼저 시도한다.
     """
+    if nasa:
+        result = _fetch_nasa_featured(query)
+        if result:
+            return result
+
     pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
     pixabay_key = os.environ.get("PIXABAY_API_KEY", "").strip()
 
@@ -44,6 +50,73 @@ def fetch_featured_image(query: str) -> dict | None:
 
     print("  ⚠ 대표 이미지를 찾지 못했습니다.")
     return None
+
+
+def _nasa_preview_to_large(url: str) -> str:
+    """NASA 썸네일 URL → 대형 이미지 URL로 변환"""
+    if url.endswith('~thumb.jpg'):
+        return url[:-len('~thumb.jpg')] + '~large.jpg'
+    return url
+
+
+def _fetch_nasa_featured(query: str) -> dict | None:
+    """NASA Image Library — API 키 불필요, 가장 관련성 높은 이미지 1개"""
+    try:
+        resp = requests.get(
+            "https://images-api.nasa.gov/search",
+            params={"q": query, "media_type": "image"},
+            timeout=10,
+        )
+        items = resp.json().get("collection", {}).get("items", []) if resp.ok else []
+        for item in items:
+            links = item.get("links", [])
+            data  = item.get("data", [{}])[0]
+            for link in links:
+                if link.get("rel") == "preview" and link.get("href", "").endswith(".jpg"):
+                    url = _nasa_preview_to_large(link["href"])
+                    title = data.get("title", query)
+                    return {
+                        "url":    url,
+                        "alt":    title,
+                        "credit": f"Image Credit: NASA ({title})",
+                        "source": "nasa",
+                    }
+    except Exception as e:
+        print(f"  ⚠ NASA 이미지 오류: {e}")
+    return None
+
+
+def _fetch_nasa_multiple(query: str, count: int) -> list[dict]:
+    """NASA Image Library — 여러 장 검색 (랜덤 셔플)"""
+    try:
+        resp = requests.get(
+            "https://images-api.nasa.gov/search",
+            params={"q": query, "media_type": "image"},
+            timeout=10,
+        )
+        items = resp.json().get("collection", {}).get("items", []) if resp.ok else []
+        results = []
+        random.shuffle(items)
+        for item in items:
+            links = item.get("links", [])
+            data  = item.get("data", [{}])[0]
+            for link in links:
+                if link.get("rel") == "preview" and link.get("href", "").endswith(".jpg"):
+                    url = _nasa_preview_to_large(link["href"])
+                    title = data.get("title", query)
+                    results.append({
+                        "url":    url,
+                        "alt":    title,
+                        "credit": f"Image Credit: NASA ({title})",
+                        "source": "nasa",
+                    })
+                    break
+            if len(results) >= count:
+                break
+        return results
+    except Exception as e:
+        print(f"  ⚠ NASA 다중 이미지 오류: {e}")
+    return []
 
 
 def _fetch_pexels_featured(query: str, api_key: str) -> dict | None:
@@ -98,26 +171,36 @@ def _fetch_pixabay_featured(query: str, api_key: str) -> dict | None:
     return None
 
 
-def fetch_multiple_images(query: str, count: int = 4) -> list[dict]:
+def fetch_multiple_images(query: str, count: int = 4, nasa: bool = False) -> list[dict]:
     """
     글 주제에 맞는 무료 이미지 여러 장 검색 (중복 없이)
+    nasa=True 이면 NASA 이미지를 먼저 가져오고 부족하면 Pexels/Pixabay로 보충.
     반환: [{"url": str, "alt": str, "credit": str}, ...]
     """
+    results = []
+
+    if nasa:
+        nasa_imgs = _fetch_nasa_multiple(query, count)
+        results.extend(nasa_imgs)
+        if len(results) >= count:
+            return results[:count]
+
+    remaining = count - len(results)
     pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
     pixabay_key = os.environ.get("PIXABAY_API_KEY", "").strip()
 
-    if pexels_key:
-        results = _fetch_pexels_multiple(query, pexels_key, count)
-        if results:
-            return results
+    if pexels_key and remaining > 0:
+        pexels_imgs = _fetch_pexels_multiple(query, pexels_key, remaining)
+        results.extend(pexels_imgs)
 
-    if pixabay_key:
-        results = _fetch_pixabay_multiple(query, pixabay_key, count)
-        if results:
-            return results
+    if pixabay_key and len(results) < count:
+        remaining = count - len(results)
+        pixabay_imgs = _fetch_pixabay_multiple(query, pixabay_key, remaining)
+        results.extend(pixabay_imgs)
 
-    print("  ⚠ 이미지 API 키 없음 (PEXELS_API_KEY 또는 PIXABAY_API_KEY를 .env에 설정하세요)")
-    return []
+    if not results:
+        print("  ⚠ 이미지 API 키 없음 (PEXELS_API_KEY 또는 PIXABAY_API_KEY를 .env에 설정하세요)")
+    return results[:count]
 
 
 def _fetch_pexels_multiple(query: str, api_key: str, count: int) -> list[dict]:

@@ -697,8 +697,8 @@ def _run_and_publish(prompt: str, mode: str) -> dict:
 
     image_query = result.get('image_query', 'space galaxy universe stars')
     print(f"  이미지 검색: {image_query}")
-    featured_image = fetch_featured_image(image_query)
-    body_images    = fetch_multiple_images(image_query, count=3)
+    featured_image = fetch_featured_image(image_query, nasa=True)
+    body_images    = fetch_multiple_images(image_query, count=3, nasa=True)
 
     if featured_image:
         print(f"  대표 이미지: {featured_image['credit']}")
