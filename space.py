@@ -28,6 +28,7 @@ from writer import parse_output
 from wordpress import publish_post
 from images import fetch_featured_image, fetch_multiple_images
 from topic_tracker import get_recent_keywords, get_recent_titles, save_topic
+from trending import fetch_all_trending, build_trending_section
 
 # ★ newbicon 카테고리 ID — WordPress 관리자 → 카테고리에서 확인 후 입력
 CATEGORY_ID = None
@@ -191,6 +192,8 @@ def _post_global_economy():
     news = _fetch_news(GLOBAL_FEEDS)
     avoid_str = _build_avoid_str()
     chat = _build_chat_instruction()
+    trending_data = fetch_all_trending(days=7)
+    trending_section = build_trending_section(trending_data)
 
     if not news:
         print("  ⚠ 뉴스 없음 → 트렌드 글로 대체")
@@ -224,13 +227,15 @@ def _post_global_economy():
 6. 마무리 (2문장): 짧게.""",
     ]
 
-    prompt = f"""아래 최신 글로벌 우주 산업 뉴스를 바탕으로 한국어 경제 분석 블로그 글을 써라.
+    prompt = f"""아래 최신 뉴스와 트렌딩 콘텐츠를 참고해 한국어 경제 분석 블로그 글을 써라.
 
 ---최신 뉴스 (참고용 — 직접 번역·복사 금지)---
 {news_text}---
 
+{trending_section}
+
 [작성 원칙]
-- 뉴스 중 가장 경제적 파급효과가 큰 것 1개를 골라 중심 주제로 삼아라.
+- 위 뉴스와 트렌딩 콘텐츠를 종합해 가장 경제적 파급효과가 크고 독자 관심이 높을 것 1개를 골라라.
 - 이 뉴스의 사실 관계보다 **"이게 우주 산업 경제에 어떤 의미인지"**를 분석하는 글을 써라.
   예시 앵글: "로켓랩의 2분기 발사 성공률과 위성 수주 계약이 LEO 위성 경제에 미치는 파급효과"
 - 계약 금액, 발사 횟수, 시장 점유율, 경쟁사 대비 수치를 반드시 포함한다.
@@ -266,6 +271,8 @@ def _post_korea_defense():
     news = _fetch_news(KOREA_FEEDS)
     avoid_str = _build_avoid_str()
     chat = _build_chat_instruction()
+    trending_data = fetch_all_trending(days=7)
+    trending_section = build_trending_section(trending_data)
 
     news_text = ''.join(
         f"\n[뉴스 {i}]\n제목: {n['title']}\n출처: {n['source']}\nURL: {n['url']}\n내용: {n['summary']}\n"
@@ -297,11 +304,14 @@ def _post_korea_defense():
 6. 마무리 (2문장).""",
     ]
 
-    prompt = f"""아래 뉴스를 참고해 국내 방산·우주 산업을 경제적 관점에서 분석하는 한국어 블로그 글을 써라.
+    prompt = f"""아래 뉴스와 트렌딩 콘텐츠를 참고해 국내 방산·우주 산업을 경제적 관점에서 분석하는 한국어 블로그 글을 써라.
 
 {news_section}
 
+{trending_section}
+
 [작성 원칙]
+- 위 뉴스와 트렌딩 콘텐츠를 종합해 독자 관심이 높은 국내 방산·우주 주제를 하나 선택하라.
 - 한국 방산·우주 기업(한화에어로스페이스, KAI, LIG넥스원, 한국항공우주연구원, 쎄트렉아이 등)의
   최근 동향·수주·기술 개발을 경제 산업 관점으로 분석한다.
 - "이 계약·기술이 한국 방산·우주 생태계와 글로벌 시장에 어떤 경제적 의미인지"를 핵심으로 써라.
@@ -336,6 +346,8 @@ def _post_tech_trend():
     news = _fetch_news(GLOBAL_FEEDS)
     avoid_str = _build_avoid_str()
     chat = _build_chat_instruction()
+    trending_data = fetch_all_trending(days=7)
+    trending_section = build_trending_section(trending_data)
 
     news_text = ''.join(
         f"\n[뉴스 {i}]\n제목: {n['title']}\n출처: {n['source']}\nURL: {n['url']}\n내용: {n['summary']}\n"
@@ -367,11 +379,14 @@ def _post_tech_trend():
 6. 마무리 (2문장): 짧고 강렬하게.""",
     ]
 
-    prompt = f"""아래 뉴스를 참고해 우주 테크·비즈니스 트렌드를 경제적 관점으로 분석하는 한국어 블로그 글을 써라.
+    prompt = f"""아래 뉴스와 트렌딩 콘텐츠를 참고해 우주 테크·비즈니스 트렌드를 경제적 관점으로 분석하는 한국어 블로그 글을 써라.
 
 {news_section}
 
+{trending_section}
+
 [작성 원칙]
+- 위 뉴스와 트렌딩 콘텐츠를 종합해 독자 관심이 가장 높은 우주 테크·비즈니스 트렌드 하나를 선택하라.
 - 재사용 로켓, LEO 메가 위성망, 우주 인터넷, 달 경제, 우주 제조·관광 등
   우주 비즈니스의 새로운 트렌드를 경제·산업 구조 관점에서 분석한다.
 - "이 트렌드가 시장을 어떻게 바꾸고 어디서 돈이 만들어지는지"를 중심으로.
@@ -406,6 +421,8 @@ def _post_company_analysis():
     news = _fetch_news(DEFENSE_FEEDS + GLOBAL_FEEDS)
     avoid_str = _build_avoid_str()
     chat = _build_chat_instruction()
+    trending_data = fetch_all_trending(days=7)
+    trending_section = build_trending_section(trending_data)
 
     if not news:
         return _post_global_economy()
@@ -438,13 +455,15 @@ def _post_company_analysis():
 6. 마무리 (2문장).""",
     ]
 
-    prompt = f"""아래 우주·방산 기업 뉴스를 바탕으로 기업 행보의 산업 파급효과를 분석하는 한국어 블로그 글을 써라.
+    prompt = f"""아래 우주·방산 기업 뉴스와 트렌딩 콘텐츠를 바탕으로 기업 행보의 산업 파급효과를 분석하는 한국어 블로그 글을 써라.
 
 ---최신 뉴스 (참고용 — 직접 번역·복사 금지)---
 {news_text}---
 
+{trending_section}
+
 [작성 원칙]
-- 뉴스 중 가장 파급효과가 큰 기업 1곳의 행보를 골라 중심 주제로 삼아라.
+- 위 뉴스와 트렌딩 콘텐츠를 종합해 독자 관심이 가장 높고 파급효과가 큰 기업 1곳의 행보를 골라 중심 주제로 삼아라.
   SpaceX, Rocket Lab, Blue Origin, Boeing, Northrop Grumman, L3Harris, Airbus Defence,
   Hanwha Aerospace, KAI 등 우주·방산 기업 모두 대상.
 - "이 기업의 X 결정이 Y 산업 생태계에 어떤 경제적 파급효과를 주는가"를 분석하는 글.
@@ -480,6 +499,8 @@ def _post_weekly_issue():
     news = _fetch_news(GLOBAL_FEEDS + DEFENSE_FEEDS, max_articles=10)
     avoid_str = _build_avoid_str()
     chat = _build_chat_instruction()
+    trending_data = fetch_all_trending(days=7)
+    trending_section = build_trending_section(trending_data)
 
     news_text = ''.join(
         f"\n[뉴스 {i}]\n제목: {n['title']}\n출처: {n['source']}\nURL: {n['url']}\n내용: {n['summary']}\n"
@@ -503,12 +524,14 @@ def _post_weekly_issue():
 5. 마무리 (2문장): 짧게.""",
     ]
 
-    prompt = f"""아래 이번 주 우주·방산 뉴스를 바탕으로 주간 우주 경제 이슈를 분석하는 한국어 블로그 글을 써라.
+    prompt = f"""아래 이번 주 우주·방산 뉴스와 트렌딩 콘텐츠를 바탕으로 주간 우주 경제 이슈를 분석하는 한국어 블로그 글을 써라.
 
 {news_section}
 
+{trending_section}
+
 [작성 원칙]
-- 이번 주 뉴스 중 경제적으로 의미 있는 것 2~3개를 엮어서 분석한다.
+- 위 뉴스와 트렌딩 콘텐츠를 종합해 이번 주 가장 주목받은 이슈 2~3개를 엮어서 분석한다.
 - 단순 뉴스 나열이 아니라 "이 이슈들이 우주 경제의 어떤 흐름을 보여주는가"를 연결해서 써라.
 - 구체적 수치(금액, 계약 기간, 위성 수, 발사 성공률 등) 반드시 포함.
 - 종목 추천 금지. 산업 트렌드·경제 구조 분석 중심.
