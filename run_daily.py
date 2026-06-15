@@ -49,39 +49,39 @@ def run_site(site_key: str, topic: str):
 def main():
     now = datetime.now(KST)
 
-    # ── 주말 체크 (0=월 ... 6=일)
+    # ── 일요일만 스킵 (0=월 ... 5=토 ... 6=일)
     weekday = now.weekday()
-    if weekday >= 5:
-        day_names = {5: '토요일', 6: '일요일'}
-        logging.info(f'오늘은 {day_names[weekday]} → 자동 포스팅 없음 (월~금만 실행)')
+    if weekday == 6:
+        logging.info('오늘은 일요일 → 자동 포스팅 없음 (월~토만 실행)')
         return
 
-    day_names = ['월', '화', '수', '목', '금']
+    day_names = ['월', '화', '수', '목', '금', '토']
     logging.info('=' * 52)
     logging.info(f'  일일 자동 포스팅 시작: {now.strftime("%Y-%m-%d")} ({day_names[weekday]}) KST')
     logging.info('=' * 52)
 
     results = []
 
-    # ── blacknudge: 생활속 잡학 1개 ───────────────────────
-    logging.info('\n[잡학] 블랙넛지 잡학 포스팅...')
-    try:
-        from trivia import post_trivia
-        post_trivia()
-        results.append('블랙넛지/잡학 ✅')
-    except Exception as e:
-        logging.error(f'  ❌ 블랙넛지/잡학 오류: {e}')
-        results.append('블랙넛지/잡학 ❌')
+    # ── blacknudge: 생활속 잡학 (월~금만) ────────────────────
+    if weekday < 5:
+        logging.info('\n[잡학] 블랙넛지 잡학 포스팅...')
+        try:
+            from trivia import post_trivia
+            post_trivia()
+            results.append('블랙넛지/잡학 ✅')
+        except Exception as e:
+            logging.error(f'  ❌ 블랙넛지/잡학 오류: {e}')
+            results.append('블랙넛지/잡학 ❌')
 
-    # ── newbicon: 우주과학 1개 (매일 고정) ────────────────
-    logging.info('\n[우주과학] 뉴비콘 우주과학 포스팅...')
+    # ── newbicon: 우주 경제 분석 (월~금) / 우주과학 (토) ────
+    logging.info('\n[뉴비콘] 포스팅...')
     try:
         from space import post_space
         post_space()
-        results.append('뉴비콘/우주과학 ✅')
+        results.append('뉴비콘 ✅')
     except Exception as e:
-        logging.error(f'  ❌ 뉴비콘/우주과학 오류: {e}')
-        results.append('뉴비콘/우주과학 ❌')
+        logging.error(f'  ❌ 뉴비콘 오류: {e}')
+        results.append('뉴비콘 ❌')
 
     # ── 최종 요약 ───────────────────────────────────────────
     end = datetime.now(KST)
