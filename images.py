@@ -1,19 +1,22 @@
 """
 images.py - 무료 이미지 검색 및 다운로드 모듈
 
-지원 소스:
-  0. NASA Image Library (API 키 불필요, 우주 관련 글 우선 사용)
-  1. Pexels API (PEXELS_API_KEY 필요, 무료 등록)
-  2. Pixabay API (PIXABAY_API_KEY 필요, 무료 등록)
-  3. 모두 없으면 이미지 건너뜀
+지원 소스 (우선순위 순):
+  0. NASA Image Library   - API 키 불필요, 우주 관련 글 우선 사용
+  1. Wikimedia Commons    - API 키 불필요, CC/공개 도메인, 우주·과학 이미지 풍부
+  2. OpenVerse            - API 키 불필요 (100 req/day), CC 상업 가능 이미지
+  3. Pexels API           - PEXELS_API_KEY 필요 (무료 등록)
+  4. Pixabay API          - PIXABAY_API_KEY 필요 (무료 등록)
+  5. 모두 없으면 이미지 건너뜀
 
-API 키 발급:
+API 키 발급 (선택):
   Pexels  → https://www.pexels.com/api/
   Pixabay → https://pixabay.com/api/docs/
 """
 import requests
 import os
 import random
+from bs4 import BeautifulSoup
 
 
 def fetch_image(query: str) -> dict | None:
@@ -28,23 +31,30 @@ def fetch_image(query: str) -> dict | None:
 def fetch_featured_image(query: str, nasa: bool = False) -> dict | None:
     """
     대표 이미지 전용 검색 - 랜덤화 없이 가장 관련성 높은 이미지 1개 반환.
-    nasa=True 이면 NASA 이미지 라이브러리를 가장 먼저 시도한다.
+    nasa=True 이면 NASA → Wikimedia → OpenVerse → Pexels → Pixabay 순서로 시도.
+    nasa=False 이면 OpenVerse → Wikimedia → Pexels → Pixabay 순서로 시도.
     """
-    if nasa:
-        result = _fetch_nasa_featured(query)
-        if result:
-            return result
-
-    pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
+    pexels_key  = os.environ.get("PEXELS_API_KEY", "").strip()
     pixabay_key = os.environ.get("PIXABAY_API_KEY", "").strip()
 
-    if pexels_key:
-        result = _fetch_pexels_featured(query, pexels_key)
-        if result:
-            return result
+    if nasa:
+        sources = [
+            lambda: _fetch_nasa_featured(query),
+            lambda: _fetch_wikimedia_featured(query),
+            lambda: _fetch_openverse_featured(query),
+            lambda: (_fetch_pexels_featured(query, pexels_key) if pexels_key else None),
+            lambda: (_fetch_pixabay_featured(query, pixabay_key) if pixabay_key else None),
+        ]
+    else:
+        sources = [
+            lambda: _fetch_openverse_featured(query),
+            lambda: _fetch_wikimedia_featured(query),
+            lambda: (_fetch_pexels_featured(query, pexels_key) if pexels_key else None),
+            lambda: (_fetch_pixabay_featured(query, pixabay_key) if pixabay_key else None),
+        ]
 
-    if pixabay_key:
-        result = _fetch_pixabay_featured(query, pixabay_key)
+    for source_fn in sources:
+        result = source_fn()
         if result:
             return result
 
@@ -119,6 +129,173 @@ def _fetch_nasa_multiple(query: str, count: int) -> list[dict]:
     return []
 
 
+def _fetch_wikimedia_featured(query: str) -> dict | None:
+    """Wikimedia Commons — API 키 불필요, CC/공개 도메인 이미지 1개"""
+    try:
+        resp = requests.get(
+            "https://commons.wikimedia.org/w/api.php",
+            params={
+                "action": "query",
+                "generator": "search",
+                "gsrsearch": f"filetype:bitmap {query}",
+                "gsrnamespace": 6,
+                "gsrlimit": 10,
+                "prop": "imageinfo",
+                "iiprop": "url|mime|extmetadata",
+                "iiurlwidth": 1200,
+                "format": "json",
+            },
+            timeout=10,
+        )
+        if not resp.ok:
+            return None
+        pages = resp.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            info_list = page.get("imageinfo", [])
+            if not info_list:
+                continue
+            info = info_list[0]
+            if not info.get("mime", "").startswith("image/"):
+                continue
+            url = info.get("thumburl") or info.get("url")
+            if not url:
+                continue
+            meta     = info.get("extmetadata", {})
+            artist   = BeautifulSoup(
+                meta.get("Artist", {}).get("value", "Wikimedia Commons"), "html.parser"
+            ).get_text()[:60]
+            license_short = meta.get("LicenseShortName", {}).get("value", "CC")
+            title = page.get("title", query).replace("File:", "")
+            return {
+                "url":    url,
+                "alt":    title,
+                "credit": f"{artist} / Wikimedia Commons ({license_short})",
+                "source": "wikimedia",
+            }
+    except Exception as e:
+        print(f"  ⚠ Wikimedia 이미지 오류: {e}")
+    return None
+
+
+def _fetch_wikimedia_multiple(query: str, count: int) -> list[dict]:
+    """Wikimedia Commons — API 키 불필요, 여러 장 (랜덤 셔플)"""
+    try:
+        resp = requests.get(
+            "https://commons.wikimedia.org/w/api.php",
+            params={
+                "action": "query",
+                "generator": "search",
+                "gsrsearch": f"filetype:bitmap {query}",
+                "gsrnamespace": 6,
+                "gsrlimit": min(count * 3, 20),
+                "prop": "imageinfo",
+                "iiprop": "url|mime|extmetadata",
+                "iiurlwidth": 1200,
+                "format": "json",
+            },
+            timeout=10,
+        )
+        if not resp.ok:
+            return []
+        pages = list(resp.json().get("query", {}).get("pages", {}).values())
+        random.shuffle(pages)
+        results = []
+        for page in pages:
+            info_list = page.get("imageinfo", [])
+            if not info_list:
+                continue
+            info = info_list[0]
+            if not info.get("mime", "").startswith("image/"):
+                continue
+            url = info.get("thumburl") or info.get("url")
+            if not url:
+                continue
+            meta     = info.get("extmetadata", {})
+            artist   = BeautifulSoup(
+                meta.get("Artist", {}).get("value", "Wikimedia Commons"), "html.parser"
+            ).get_text()[:60]
+            license_short = meta.get("LicenseShortName", {}).get("value", "CC")
+            title = page.get("title", query).replace("File:", "")
+            results.append({
+                "url":    url,
+                "alt":    title,
+                "credit": f"{artist} / Wikimedia Commons ({license_short})",
+                "source": "wikimedia",
+            })
+            if len(results) >= count:
+                break
+        return results
+    except Exception as e:
+        print(f"  ⚠ Wikimedia 다중 이미지 오류: {e}")
+    return []
+
+
+def _fetch_openverse_featured(query: str) -> dict | None:
+    """OpenVerse (WordPress 재단) — API 키 불필요, CC 상업 가능 이미지 1개"""
+    try:
+        resp = requests.get(
+            "https://api.openverse.org/v1/images/",
+            params={
+                "q": query,
+                "page_size": 5,
+                "license_type": "commercial",
+                "mature": "false",
+            },
+            headers={"User-Agent": "NewbiconSpaceBot/1.0 (blog automation, educational)"},
+            timeout=10,
+        )
+        if not resp.ok:
+            return None
+        results = resp.json().get("results", [])
+        if results:
+            r = results[0]
+            url = r.get("url", "")
+            if not url:
+                return None
+            return {
+                "url":    url,
+                "alt":    r.get("title", query),
+                "credit": f"{r.get('creator', 'OpenVerse')} / OpenVerse ({r.get('license', 'CC').upper()})",
+                "source": "openverse",
+            }
+    except Exception as e:
+        print(f"  ⚠ OpenVerse 이미지 오류: {e}")
+    return None
+
+
+def _fetch_openverse_multiple(query: str, count: int) -> list[dict]:
+    """OpenVerse — API 키 불필요, 여러 장 (랜덤 셔플)"""
+    try:
+        resp = requests.get(
+            "https://api.openverse.org/v1/images/",
+            params={
+                "q": query,
+                "page_size": min(count * 3, 20),
+                "license_type": "commercial",
+                "mature": "false",
+            },
+            headers={"User-Agent": "NewbiconSpaceBot/1.0 (blog automation, educational)"},
+            timeout=10,
+        )
+        if not resp.ok:
+            return []
+        results = resp.json().get("results", [])
+        random.shuffle(results)
+        return [
+            {
+                "url":    r["url"],
+                "alt":    r.get("title", query),
+                "credit": f"{r.get('creator', 'OpenVerse')} / OpenVerse ({r.get('license', 'CC').upper()})",
+                "source": "openverse",
+            }
+            for r in results[:count]
+            if r.get("url")
+        ]
+    except Exception as e:
+        print(f"  ⚠ OpenVerse 다중 이미지 오류: {e}")
+    return []
+
+
 def _fetch_pexels_featured(query: str, api_key: str) -> dict | None:
     """Pexels - page 1, 첫 번째 결과 반환 (랜덤화 없음)"""
     try:
@@ -174,32 +351,31 @@ def _fetch_pixabay_featured(query: str, api_key: str) -> dict | None:
 def fetch_multiple_images(query: str, count: int = 4, nasa: bool = False) -> list[dict]:
     """
     글 주제에 맞는 무료 이미지 여러 장 검색 (중복 없이)
-    nasa=True 이면 NASA 이미지를 먼저 가져오고 부족하면 Pexels/Pixabay로 보충.
+    nasa=True: NASA → Wikimedia → OpenVerse → Pexels → Pixabay 순으로 채움
+    nasa=False: OpenVerse → Wikimedia → Pexels → Pixabay 순으로 채움
     반환: [{"url": str, "alt": str, "credit": str}, ...]
     """
     results = []
-
-    if nasa:
-        nasa_imgs = _fetch_nasa_multiple(query, count)
-        results.extend(nasa_imgs)
-        if len(results) >= count:
-            return results[:count]
-
-    remaining = count - len(results)
-    pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
+    pexels_key  = os.environ.get("PEXELS_API_KEY", "").strip()
     pixabay_key = os.environ.get("PIXABAY_API_KEY", "").strip()
 
-    if pexels_key and remaining > 0:
-        pexels_imgs = _fetch_pexels_multiple(query, pexels_key, remaining)
-        results.extend(pexels_imgs)
+    def _fill(fetch_fn, *args):
+        if len(results) >= count:
+            return
+        needed = count - len(results)
+        results.extend(fetch_fn(*args, needed))
 
-    if pixabay_key and len(results) < count:
-        remaining = count - len(results)
-        pixabay_imgs = _fetch_pixabay_multiple(query, pixabay_key, remaining)
-        results.extend(pixabay_imgs)
+    if nasa:
+        _fill(_fetch_nasa_multiple, query)
+    _fill(_fetch_openverse_multiple, query)
+    _fill(_fetch_wikimedia_multiple, query)
+    if pexels_key:
+        _fill(_fetch_pexels_multiple, query, pexels_key)
+    if pixabay_key:
+        _fill(_fetch_pixabay_multiple, query, pixabay_key)
 
     if not results:
-        print("  ⚠ 이미지 API 키 없음 (PEXELS_API_KEY 또는 PIXABAY_API_KEY를 .env에 설정하세요)")
+        print("  ⚠ 이미지를 하나도 찾지 못했습니다.")
     return results[:count]
 
 
@@ -385,7 +561,7 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
 
-    test_query = "건강한 생활"
+    test_query = "rocket launch space"
     print(f"=== 이미지 검색 테스트: '{test_query}' ===")
     result = fetch_image(test_query)
     if result:
