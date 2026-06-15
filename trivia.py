@@ -5,7 +5,6 @@ trivia.py - '잡학' 카테고리 블랙넛지 포스팅
 import sys
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import os
-import json
 import random
 import anthropic
 from dotenv import load_dotenv
@@ -14,7 +13,7 @@ load_dotenv()
 from writer import parse_output
 from wordpress import publish_post
 from images import fetch_featured_image, fetch_multiple_images
-from topic_tracker import get_recent_keywords, get_recent_titles, save_topic
+from topic_tracker import get_recent_keywords, get_recent_titles, save_topic, load_used_topics
 
 # ★ blacknudge '잡학' 카테고리 ID — WordPress 관리자 → 카테고리에서 확인 후 입력
 CATEGORY_ID = None
@@ -27,24 +26,23 @@ WP_ENV = {
     'wp_pass_env': 'WP_APP_PASSWORD',
 }
 
-# 번갈아 쓰기 상태 파일
-STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trivia_state.json')
-
 
 def _get_next_type() -> str:
-    """'생활' ↔ '지식' 번갈아 반환, 상태 저장"""
-    try:
-        with open(STATE_FILE, 'r', encoding='utf-8') as f:
-            last = json.load(f).get('last_type', '지식')
-    except (FileNotFoundError, json.JSONDecodeError):
-        last = '지식'  # 첫 실행은 생활 잡학부터
-
-    next_type = '생활' if last == '지식' else '지식'
-
-    with open(STATE_FILE, 'w', encoding='utf-8') as f:
-        json.dump({'last_type': next_type}, f, ensure_ascii=False)
-
-    return next_type
+    """used_topics.json의 마지막 잡학 글 유형을 읽어 반대 유형 반환.
+    trivia_state.json 대신 이미 GitHub에 커밋되는 used_topics.json 기반으로 동작."""
+    topics = load_used_topics()
+    for t in reversed(topics):
+        if t.get('site') == 'health_trivia':
+            topic_str = t.get('topic', '')
+            if '생활' in topic_str:
+                print("  마지막: 생활 잡학 → 이번: 지식 잡학")
+                return '지식'
+            elif '지식' in topic_str:
+                print("  마지막: 지식 잡학 → 이번: 생활 잡학")
+                return '생활'
+    # 기록 없으면 생활부터 시작
+    print("  최근 기록 없음 → 생활 잡학으로 시작")
+    return '생활'
 
 
 # ── 주제 선택 프롬프트 ──────────────────────────────────────
