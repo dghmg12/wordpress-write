@@ -1,11 +1,11 @@
 """
 run_daily.py - 매일 자동 실행 스크립트
-  - 실행 조건: 월~금요일만 (주말 자동 스킵)
-  - blacknudge: 생활속 잡학 1개 (임시글)
-  - newbicon:   우주과학 1개 (임시글)
+  - 실행 조건: 월~토 (일요일 자동 스킵)
+  - blacknudge: 라이프스타일 (월·화·수·금) / 잡학 (목, 1회/주)
+  - newbicon:   우주 경제 분석 (월~금) / 우주과학 (토)
 
 실행: py run_daily.py
-스케줄: 월~금 오전 8시 (GitHub Actions / Windows 작업 스케줄러)
+스케줄: 월~토 오전 8시 (GitHub Actions / Windows 작업 스케줄러)
 """
 import sys
 import os
@@ -62,16 +62,26 @@ def main():
 
     results = []
 
-    # ── blacknudge: 생활속 잡학 (월~금만) ────────────────────
-    if weekday < 5:
-        logging.info('\n[잡학] 블랙넛지 잡학 포스팅...')
-        try:
-            from trivia import post_trivia
-            post_trivia()
-            results.append('블랙넛지/잡학 ✅')
-        except Exception as e:
-            logging.error(f'  ❌ 블랙넛지/잡학 오류: {e}')
-            results.append('블랙넛지/잡학 ❌')
+    # ── blacknudge: 목요일만 잡학, 나머지 평일(월~수·금)은 라이프스타일 ──
+    if weekday < 5:  # 월~금 (토요일 블랙넛지 없음)
+        if weekday == 3:  # 목요일: 잡학 (1회/주)
+            logging.info('\n[잡학] 블랙넛지 잡학 포스팅...')
+            try:
+                from trivia import post_trivia
+                post_trivia()
+                results.append('블랙넛지/잡학 ✅')
+            except Exception as e:
+                logging.error(f'  ❌ 블랙넛지/잡학 오류: {e}')
+                results.append('블랙넛지/잡학 ❌')
+        else:  # 월·화·수·금: 라이프스타일
+            logging.info('\n[라이프스타일] 블랙넛지 라이프스타일 포스팅...')
+            try:
+                from lifestyle import post_lifestyle
+                post_lifestyle()
+                results.append('블랙넛지/라이프스타일 ✅')
+            except Exception as e:
+                logging.error(f'  ❌ 블랙넛지/라이프스타일 오류: {e}')
+                results.append('블랙넛지/라이프스타일 ❌')
 
     # ── newbicon: 우주 경제 분석 (월~금) / 우주과학 (토) ────
     logging.info('\n[뉴비콘] 포스팅...')
