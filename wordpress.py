@@ -453,6 +453,34 @@ def test_connection(wp_env: dict = None) -> bool:
         return False
 
 
+def fetch_recent_posts(wp_env: dict, count: int = 8) -> list[dict]:
+    """최근 발행(publish)된 포스트 목록 반환 — 내부 링크 삽입용"""
+    try:
+        url, user, app_password = get_wp_config(
+            wp_env.get("wp_url_env", "WP_URL"),
+            wp_env.get("wp_user_env", "WP_USER"),
+            wp_env.get("wp_pass_env", "WP_APP_PASSWORD"),
+        )
+        auth = HTTPBasicAuth(user, app_password)
+        resp = requests.get(
+            f"{url}/wp-json/wp/v2/posts",
+            params={"per_page": count, "status": "publish",
+                    "_fields": "id,link,title", "orderby": "date", "order": "desc"},
+            auth=auth,
+            timeout=10,
+        )
+        if not resp.ok:
+            return []
+        return [
+            {"title": p["title"]["rendered"], "url": p["link"]}
+            for p in resp.json()
+            if p.get("title", {}).get("rendered") and p.get("link")
+        ]
+    except Exception as e:
+        print(f"  ⚠ 내부 링크용 포스트 조회 실패: {e}")
+    return []
+
+
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()

@@ -462,6 +462,29 @@ def apply_inline(text: str) -> str:
     return text
 
 
+def build_internal_links_prompt(posts: list[dict]) -> str:
+    """발행된 포스트 목록 → 프롬프트용 내부 링크 지시문 반환.
+    포스트가 2개 미만이면 빈 문자열 반환 (링크 건너뜀)."""
+    if len(posts) < 2:
+        return ""
+    items = "\n".join(f"  - {p['title']} → {p['url']}" for p in posts)
+    return f"""\
+[내부 링크 — 글 본문 맨 마지막, 출처 표기 바로 위에 반드시 삽입]
+아래 목록에서 이번 글 내용과 가장 관련 있는 글 2~3개를 골라 링크한다.
+⚠ 제공된 URL만 사용. 목록에 없는 URL을 만들어내지 말 것.
+
+{items}
+
+출력 HTML 형식:
+<div style="background:#f8f9fa;border-left:4px solid #4a90d9;padding:1em 1.2em;margin:2em 0;border-radius:0 6px 6px 0;">
+<strong>📚 함께 읽으면 좋은 글</strong>
+<ul style="margin:0.6em 0 0;padding-left:1.3em;line-height:1.8;">
+<li><a href="[URL1]">[제목1]</a></li>
+<li><a href="[URL2]">[제목2]</a></li>
+</ul>
+</div>"""
+
+
 if __name__ == "__main__":
     # 테스트 실행
     from dotenv import load_dotenv

@@ -24,8 +24,8 @@ from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 
-from writer import parse_output
-from wordpress import publish_post
+from writer import parse_output, build_internal_links_prompt
+from wordpress import publish_post, fetch_recent_posts
 from images import fetch_featured_image, fetch_multiple_images
 from topic_tracker import get_recent_keywords, get_recent_titles, save_topic
 from trending import fetch_all_trending, build_trending_section
@@ -195,7 +195,7 @@ TAGS: 태그1,태그2,태그3,태그4,태그5"""
 
 
 # ── 월: 글로벌 우주 경제 뉴스 분석 ──────────────────────────
-def _post_global_economy():
+def _post_global_economy(internal_links: str = ""):
     print("  🌍 글로벌 우주 경제 뉴스 수집 중...")
     news = _fetch_news(GLOBAL_FEEDS)
     avoid_str = _build_avoid_str()
@@ -265,6 +265,8 @@ def _post_global_economy():
 [내용 구성 — 아래 중 하나 선택]
 {random.choice(structures)}
 
+{internal_links}
+
 출처 표기 (글 맨 아래):
 <p style="font-size:0.85em;color:#999;margin-top:2em;">📰 참고: <a href="뉴스URL" target="_blank">출처명</a></p>
 
@@ -274,7 +276,7 @@ def _post_global_economy():
 
 
 # ── 화: 국내 방산·우주 산업 분석 ─────────────────────────────
-def _post_korea_defense():
+def _post_korea_defense(internal_links: str = ""):
     print("  🇰🇷 국내 방산·우주 뉴스 수집 중...")
     news = _fetch_news(KOREA_FEEDS)
     avoid_str = _build_avoid_str()
@@ -340,6 +342,8 @@ def _post_korea_defense():
 [내용 구성]
 {random.choice(structures)}
 
+{internal_links}
+
 출처 표기 (글 맨 아래):
 <p style="font-size:0.85em;color:#999;margin-top:2em;">📰 참고: <a href="뉴스URL" target="_blank">출처명</a></p>
 
@@ -349,7 +353,7 @@ def _post_korea_defense():
 
 
 # ── 수: 우주 테크·비즈니스 트렌드 ───────────────────────────
-def _post_tech_trend():
+def _post_tech_trend(internal_links: str = ""):
     print("  🚀 우주 테크·비즈니스 트렌드 뉴스 수집 중...")
     news = _fetch_news(GLOBAL_FEEDS)
     avoid_str = _build_avoid_str()
@@ -415,6 +419,8 @@ def _post_tech_trend():
 [내용 구성]
 {random.choice(structures)}
 
+{internal_links}
+
 출처 표기 (글 맨 아래):
 <p style="font-size:0.85em;color:#999;margin-top:2em;">📰 참고: <a href="뉴스URL" target="_blank">출처명</a></p>
 
@@ -424,7 +430,7 @@ def _post_tech_trend():
 
 
 # ── 목: 우주 기업 행보 & 산업 파급효과 ──────────────────────
-def _post_company_analysis():
+def _post_company_analysis(internal_links: str = ""):
     print("  🏢 우주 기업 뉴스 수집 중...")
     news = _fetch_news(DEFENSE_FEEDS + GLOBAL_FEEDS)
     avoid_str = _build_avoid_str()
@@ -493,6 +499,8 @@ def _post_company_analysis():
 [내용 구성]
 {random.choice(structures)}
 
+{internal_links}
+
 출처 표기 (글 맨 아래):
 <p style="font-size:0.85em;color:#999;margin-top:2em;">📰 참고: <a href="뉴스URL" target="_blank">출처명</a></p>
 
@@ -502,7 +510,7 @@ def _post_company_analysis():
 
 
 # ── 금: 주간 우주 경제 이슈 정리 ────────────────────────────
-def _post_weekly_issue():
+def _post_weekly_issue(internal_links: str = ""):
     print("  📋 주간 우주 경제 이슈 뉴스 수집 중...")
     news = _fetch_news(GLOBAL_FEEDS + DEFENSE_FEEDS, max_articles=10)
     avoid_str = _build_avoid_str()
@@ -558,6 +566,8 @@ def _post_weekly_issue():
 [내용 구성]
 {random.choice(structures)}
 
+{internal_links}
+
 출처 표기 (글 맨 아래):
 <p style="font-size:0.85em;color:#999;margin-top:2em;">📰 참고: <a href="뉴스URL" target="_blank">출처명</a></p>
 
@@ -567,7 +577,7 @@ def _post_weekly_issue():
 
 
 # ── 토: 우주과학 탐구 (호기심·잡학) ─────────────────────────
-def _post_space_science():
+def _post_space_science(internal_links: str = ""):
     """토요일 — 우주과학 호기심·잡학 글 (경제 분석 없이 순수 우주 이야기)"""
     print("  🔭 우주과학 탐구 글 작성 중...")
     avoid_str = _build_avoid_str()
@@ -657,6 +667,8 @@ NASA, ESA, Space.com, Universe Today, 한국천문연구원, 한국어 위키백
 [내용 구성]
 {random.choice(structures)}
 
+{internal_links}
+
 {_meta_output_rules()}"""
 
     return _run_and_publish(prompt, mode='우주과학')
@@ -721,24 +733,30 @@ def post_space():
     weekday = datetime.now(KST).weekday()
     day = DAY_NAMES.get(weekday, '')
 
+    print("  🔗 내부 링크용 최근 발행글 조회 중...")
+    recent_posts = fetch_recent_posts(WP_ENV, count=8)
+    internal_links = build_internal_links_prompt(recent_posts)
+    if recent_posts:
+        print(f"    발행글 {len(recent_posts)}건 확인")
+
     if weekday in GLOBAL_DAYS:
         print(f"  🌍 오늘은 {day} → 글로벌 우주 경제 뉴스 분석")
-        return _post_global_economy()
+        return _post_global_economy(internal_links)
     elif weekday in KOREA_DAYS:
         print(f"  🇰🇷 오늘은 {day} → 국내 방산·우주 산업 분석")
-        return _post_korea_defense()
+        return _post_korea_defense(internal_links)
     elif weekday in TECH_DAYS:
         print(f"  🚀 오늘은 {day} → 우주 테크·비즈니스 트렌드")
-        return _post_tech_trend()
+        return _post_tech_trend(internal_links)
     elif weekday in COMPANY_DAYS:
         print(f"  🏢 오늘은 {day} → 우주 기업 행보 & 산업 파급효과")
-        return _post_company_analysis()
+        return _post_company_analysis(internal_links)
     elif weekday in WEEKLY_DAYS:
         print(f"  📋 오늘은 {day} → 주간 우주 경제 이슈 정리")
-        return _post_weekly_issue()
+        return _post_weekly_issue(internal_links)
     else:  # SCIENCE_DAYS (토)
         print(f"  🔭 오늘은 {day} → 우주과학 탐구")
-        return _post_space_science()
+        return _post_space_science(internal_links)
 
 
 if __name__ == '__main__':

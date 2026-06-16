@@ -10,8 +10,8 @@ import anthropic
 from dotenv import load_dotenv
 load_dotenv()
 
-from writer import parse_output
-from wordpress import publish_post
+from writer import parse_output, build_internal_links_prompt
+from wordpress import publish_post, fetch_recent_posts
 from images import fetch_featured_image, fetch_multiple_images
 from topic_tracker import get_recent_keywords, get_recent_titles, save_topic, load_used_topics
 
@@ -154,6 +154,12 @@ def post_trivia():
 
     topic_prompt = TOPIC_PROMPT[trivia_type]
 
+    print("  🔗 내부 링크용 최근 발행글 조회 중...")
+    recent_posts = fetch_recent_posts(WP_ENV, count=8)
+    internal_links = build_internal_links_prompt(recent_posts)
+    if recent_posts:
+        print(f"    발행글 {len(recent_posts)}건 확인")
+
     client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
 
     prompt = f"""아래 조건에 맞는 잡학 블로그 글을 써라.
@@ -215,6 +221,8 @@ def post_trivia():
 
 [내용 구성]
 {structure}
+
+{internal_links}
 
 ---
 글 본문이 끝나면 반드시 아래 5줄 출력. 절대 빠뜨리지 말 것.

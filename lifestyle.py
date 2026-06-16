@@ -10,8 +10,8 @@ import anthropic
 from dotenv import load_dotenv
 load_dotenv()
 
-from writer import parse_output
-from wordpress import publish_post
+from writer import parse_output, build_internal_links_prompt
+from wordpress import publish_post, fetch_recent_posts
 from images import fetch_featured_image, fetch_multiple_images
 from topic_tracker import get_recent_keywords, get_recent_titles, save_topic
 
@@ -138,7 +138,7 @@ def _build_chat_instruction() -> str:
     return "# [대화 구간 없음] 대화 블록 없이 본문으로만 구성한다."
 
 
-def _build_prompt(theme: dict, avoid_str: str, chat: str) -> str:
+def _build_prompt(theme: dict, avoid_str: str, chat: str, internal_links: str = "") -> str:
     example_ideas = '\n'.join(f'  - {idea}' for idea in theme['ideas'][:4])
 
     structures = [
@@ -252,6 +252,8 @@ def _build_prompt(theme: dict, avoid_str: str, chat: str) -> str:
 [내용 구성]
 {structure}
 
+{internal_links}
+
 ---
 글 본문이 끝나면 반드시 아래 5줄 출력. 절대 빠뜨리지 말 것.
 FOCUS_KEYWORD: 핵심 검색어(2~4단어)
@@ -268,7 +270,13 @@ def post_lifestyle():
     chat = _build_chat_instruction()
     print(f"  오늘의 라이프스타일 테마: [{theme['name']}]")
 
-    prompt = _build_prompt(theme, avoid_str, chat)
+    print("  🔗 내부 링크용 최근 발행글 조회 중...")
+    recent_posts = fetch_recent_posts(WP_ENV, count=8)
+    internal_links = build_internal_links_prompt(recent_posts)
+    if recent_posts:
+        print(f"    발행글 {len(recent_posts)}건 확인")
+
+    prompt = _build_prompt(theme, avoid_str, chat, internal_links)
 
     client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
     print("  Claude API 호출 중 (라이프스타일)...")
