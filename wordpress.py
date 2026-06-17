@@ -192,14 +192,57 @@ def publish_post(
 
 
 def _credit_to_korean(credit: str) -> str:
-    """영문 크레딧 → 한글 캡션 변환"""
+    """영문 크레딧 → 한글 캡션 변환 (소스·작가·라이선스 상세 표기)"""
     if not credit:
         return ""
-    if "Pixabay" in credit:
-        return "이미지 출처: Pixabay"
-    elif "Pexels" in credit:
-        return "이미지 출처: Pexels"
-    return "이미지 출처: 외부"
+    c = credit.strip()
+
+    def _between(s: str, open_: str, close_: str) -> str:
+        try:
+            return s[s.rindex(open_) + 1: s.rindex(close_)]
+        except ValueError:
+            return ""
+
+    if "NASA" in c:
+        # "Image Credit: NASA (Title)" 형식
+        title = _between(c, "(", ")")
+        label = f" — {title}" if title else ""
+        return (f'이미지 출처: <a href="https://images.nasa.gov" target="_blank" rel="noopener">'
+                f'NASA</a>{label}')
+
+    elif "Wikimedia Commons" in c:
+        # "{artist} / Wikimedia Commons ({license})" 형식
+        artist  = c.split(" / Wikimedia Commons")[0].strip()
+        license_ = _between(c, "(", ")")
+        artist_part = f" / {artist}" if artist else ""
+        license_part = f" ({license_})" if license_ else ""
+        return (f'이미지 출처: <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">'
+                f'Wikimedia Commons</a>{artist_part}{license_part}')
+
+    elif "OpenVerse" in c:
+        # "{creator} / OpenVerse ({license})" 형식
+        creator  = c.split(" / OpenVerse")[0].strip()
+        license_ = _between(c, "(", ")")
+        creator_part = f" / {creator}" if creator and creator != "OpenVerse" else ""
+        license_part = f" ({license_})" if license_ else ""
+        return (f'이미지 출처: <a href="https://openverse.org" target="_blank" rel="noopener">'
+                f'OpenVerse</a>{creator_part}{license_part}')
+
+    elif "Pexels" in c:
+        # "Photo by {photographer} on Pexels" 형식
+        photographer = c.replace("Photo by ", "").replace(" on Pexels", "").strip()
+        name_part = f" / {photographer}" if photographer else ""
+        return (f'이미지 출처: <a href="https://www.pexels.com" target="_blank" rel="noopener">'
+                f'Pexels</a>{name_part}')
+
+    elif "Pixabay" in c:
+        # "Image by {user} on Pixabay" 형식
+        user = c.replace("Image by ", "").replace(" on Pixabay", "").strip()
+        name_part = f" / {user}" if user else ""
+        return (f'이미지 출처: <a href="https://pixabay.com" target="_blank" rel="noopener">'
+                f'Pixabay</a>{name_part}')
+
+    return f"이미지 출처: {c}"
 
 
 def _make_img_block(image_url: str, alt: str = "", credit: str = None) -> str:
