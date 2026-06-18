@@ -388,8 +388,22 @@ def _process_markdown_lines(text: str) -> list:
     """마크다운 텍스트 → Gutenberg 블록 리스트 변환 (markdown_to_html 내부용)"""
     lines = text.split("\n")
     blocks = []
-    in_list = False
-    list_items = []
+    in_list  = False
+    in_table = False
+    list_items  = []
+    table_lines = []
+
+    TH_STYLE = ("background:#f4f6f8;border:1px solid #d0d5dd;"
+                 "padding:9px 13px;text-align:left;font-weight:600;")
+    TD_STYLE = "border:1px solid #d0d5dd;padding:9px 13px;vertical-align:top;"
+    TABLE_STYLE = ("width:100%;border-collapse:collapse;"
+                   "margin:1.4em 0;font-size:0.93em;line-height:1.6;")
+
+    def _is_separator(line: str) -> bool:
+        return bool(re.match(r"^\s*\|[\s\-:|]+\|\s*$", line))
+
+    def _parse_row(line: str) -> list[str]:
+        return [c.strip() for c in line.strip().strip("|").split("|")]
 
     def close_list():
         nonlocal in_list
@@ -404,13 +418,43 @@ def _process_markdown_lines(text: str) -> list:
             list_items.clear()
         in_list = False
 
+    def close_table():
+        nonlocal in_table
+        if not table_lines:
+            in_table = False
+            return
+        has_header = len(table_lines) >= 2 and _is_separator(table_lines[1])
+        html = f'<table style="{TABLE_STYLE}"><tbody>'
+        for i, row_line in enumerate(table_lines):
+            if _is_separator(row_line):
+                continue
+            cells = _parse_row(row_line)
+            is_header_row = has_header and i == 0
+            html += "<tr>"
+            for cell in cells:
+                tag   = "th" if is_header_row else "td"
+                style = TH_STYLE if is_header_row else TD_STYLE
+                html += f'<{tag} style="{style}">{apply_inline(cell)}</{tag}>'
+            html += "</tr>"
+        html += "</tbody></table>"
+        blocks.append(f'<!-- wp:html -->\n{html}\n<!-- /wp:html -->')
+        table_lines.clear()
+        in_table = False
+
     for line in lines:
-        is_list_item = line.startswith("- ") or line.startswith("* ")
+        is_list_item  = line.startswith("- ") or line.startswith("* ")
+        is_table_line = line.strip().startswith("|") and line.strip().endswith("|")
 
         if not is_list_item and in_list:
             close_list()
+        if not is_table_line and in_table:
+            close_table()
 
-        if line.startswith("# "):
+        if is_table_line:
+            in_table = True
+            table_lines.append(line)
+
+        elif line.startswith("# "):
             pass  # 포스트 제목은 WordPress가 H1로 출력 → 본문엔 생략
 
         elif line.startswith("## "):
@@ -451,6 +495,8 @@ def _process_markdown_lines(text: str) -> list:
 
     if in_list:
         close_list()
+    if in_table:
+        close_table()
 
     return blocks
 
