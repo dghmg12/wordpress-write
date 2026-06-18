@@ -424,19 +424,25 @@ def _process_markdown_lines(text: str) -> list:
             in_table = False
             return
         has_header = len(table_lines) >= 2 and _is_separator(table_lines[1])
-        html = f'<table style="{TABLE_STYLE}"><tbody>'
-        for i, row_line in enumerate(table_lines):
-            if _is_separator(row_line):
-                continue
-            cells = _parse_row(row_line)
-            is_header_row = has_header and i == 0
+        html = f'<table style="{TABLE_STYLE}">'
+
+        if has_header:
+            html += "<thead><tr>"
+            for cell in _parse_row(table_lines[0]):
+                html += f'<th style="{TH_STYLE}">{apply_inline(cell)}</th>'
+            html += "</tr></thead>"
+            data_rows = [r for r in table_lines[2:] if not _is_separator(r)]
+        else:
+            data_rows = [r for r in table_lines if not _is_separator(r)]
+
+        html += "<tbody>"
+        for row_line in data_rows:
             html += "<tr>"
-            for cell in cells:
-                tag   = "th" if is_header_row else "td"
-                style = TH_STYLE if is_header_row else TD_STYLE
-                html += f'<{tag} style="{style}">{apply_inline(cell)}</{tag}>'
+            for cell in _parse_row(row_line):
+                html += f'<td style="{TD_STYLE}">{apply_inline(cell)}</td>'
             html += "</tr>"
         html += "</tbody></table>"
+
         blocks.append(f'<!-- wp:html -->\n{html}\n<!-- /wp:html -->')
         table_lines.clear()
         in_table = False
