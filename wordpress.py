@@ -147,12 +147,17 @@ def publish_post(
             focus_keyword=focus_keyword,   # 첫 번째 이미지에 포커스 키워드 alt 적용
         )
 
+    # 포커스 키워드 → URL 슬러그 (Rank Math 'keyword in URL' 검사 통과)
+    slug = focus_keyword.strip().replace(" ", "-") if focus_keyword else ""
+
     # 포스트 데이터 구성
     post_data = {
         "title": title,
         "content": final_content,
         "status": status,
     }
+    if slug:
+        post_data["slug"] = slug
     if excerpt:
         post_data["excerpt"] = excerpt
     if tag_ids:

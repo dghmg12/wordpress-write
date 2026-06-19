@@ -10,7 +10,7 @@ import anthropic
 from dotenv import load_dotenv
 load_dotenv()
 
-from writer import parse_output, build_internal_links_prompt
+from writer import parse_output, build_internal_links_prompt, build_seo_prompt
 from wordpress import publish_post, fetch_recent_posts
 from images import fetch_featured_image, fetch_multiple_images
 from topic_tracker import get_recent_keywords, get_recent_titles, save_topic, load_used_topics
@@ -169,13 +169,7 @@ def post_trivia():
 [금지 주제 - 최근 사용됨, 의미상 비슷한 것도 피할 것]
 {avoid_str}
 
-[SEO 최적화 — 글 쓰기 전에 포커스 키워드(2~4단어)를 먼저 정하고, 아래 5곳에 반드시 포함한다]
-  ① 제목(# H1): 키워드를 제목 앞쪽에 자연스럽게 배치
-  ② 첫 문단 100자 이내: 키워드 또는 동일 표현이 첫 문단 앞부분에 등장
-  ③ ## 대제목 최소 1개: 키워드 또는 근접 변형어 포함
-  ④ SEO_TITLE: 키워드로 시작하거나 앞쪽 3단어 이내 배치
-  ⑤ SEO_DESCRIPTION 첫 문장: 키워드 포함
-- 키워드 밀도: 전체 본문의 1~2% (자연스럽게 분산, 억지 반복 금지)
+{build_seo_prompt()}
 
 [모바일 최적화 — 가독성 필수 조건]
 - 문단 길이: 2~3문장이면 반드시 줄 바꿈. 스마트폰 화면에서 한 문단이 5줄을 넘으면 안 된다.
