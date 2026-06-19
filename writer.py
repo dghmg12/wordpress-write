@@ -353,6 +353,7 @@ def _chat_to_html(chat_text: str, blog_name: str = "블로그") -> str:
     rows = []
     for i, (role, speaker, content) in enumerate(msgs):
         mb = 'margin-bottom:12px;' if i < len(msgs) - 1 else ''
+        styled_content = apply_inline(content)
         if role == 'blog':
             rows.append(
                 f'<div style="{mb}display:flex;align-items:flex-start;">'
@@ -360,7 +361,7 @@ def _chat_to_html(chat_text: str, blog_name: str = "블로그") -> str:
                 f'<div style="font-size:.75em;font-weight:700;color:#F41414;margin-bottom:3px;">{speaker}</div>'
                 f'<div style="background:#fff;border:1px solid #e5e5e5;'
                 f'border-radius:4px 16px 16px 16px;padding:10px 14px;'
-                f'color:#333;font-size:.95em;line-height:1.65;">{content}</div>'
+                f'color:#333;font-size:.95em;line-height:1.65;">{styled_content}</div>'
                 f'</div>'
                 f'</div>'
             )
@@ -370,7 +371,7 @@ def _chat_to_html(chat_text: str, blog_name: str = "블로그") -> str:
                 f'<div style="max-width:85%;text-align:right;">'
                 f'<div style="font-size:.75em;font-weight:600;color:#aaa;margin-bottom:3px;">{speaker}</div>'
                 f'<div style="background:#f0f0f0;border-radius:16px 4px 16px 16px;'
-                f'padding:10px 14px;color:#333;font-size:.95em;line-height:1.65;">{content}</div>'
+                f'padding:10px 14px;color:#333;font-size:.95em;line-height:1.65;">{styled_content}</div>'
                 f'</div>'
                 f'</div>'
             )
