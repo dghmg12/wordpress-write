@@ -6,6 +6,7 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import os
 import random
+from datetime import datetime
 import anthropic
 from dotenv import load_dotenv
 load_dotenv()
@@ -169,6 +170,11 @@ def post_trivia():
 
 [금지 주제 - 최근 사용됨, 의미상 비슷한 것도 피할 것]
 {avoid_str}
+
+[최신 정보 원칙]
+오늘 날짜: {datetime.now().strftime('%Y년 %m월 %d일')}
+- 통계·수치·기록은 가장 최근 확인된 값 기준으로. 출처 연도가 오래됐으면 "~기준" 표기.
+- 단종·단산 제품이나 폐지된 정책·서비스는 언급 금지.
 
 {build_seo_prompt()}
 

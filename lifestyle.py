@@ -6,6 +6,7 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import os
 import random
+from datetime import datetime
 import anthropic
 from dotenv import load_dotenv
 load_dotenv()
@@ -14,6 +15,7 @@ from writer import parse_output, build_internal_links_prompt, build_seo_prompt
 from wordpress import publish_post, fetch_recent_posts
 from images import fetch_featured_image, fetch_multiple_images
 from topic_tracker import get_recent_keywords, get_recent_titles, save_topic
+from trending import search_recent_articles, build_freshness_section
 
 # ★ blacknudge '라이프스타일' 카테고리 ID — WordPress 관리자 → 카테고리에서 확인 후 입력
 CATEGORY_ID = None
@@ -139,7 +141,7 @@ def _build_chat_instruction() -> str:
     return "# [대화 구간 없음] 대화 블록 없이 본문으로만 구성한다."
 
 
-def _build_prompt(theme: dict, avoid_str: str, chat: str, internal_links: str = "") -> str:
+def _build_prompt(theme: dict, avoid_str: str, chat: str, internal_links: str = "", freshness_section: str = "") -> str:
     example_ideas = '\n'.join(f'  - {idea}' for idea in theme['ideas'][:4])
 
     structures = [
@@ -201,6 +203,16 @@ def _build_prompt(theme: dict, avoid_str: str, chat: str, internal_links: str = 
 ② 실용 파트: 그래서 지금 내가 뭘 어떻게 해야 하는가
    → 제품명, 장소명, 실제 비용, 순서, 체크리스트 등 지금 바로 행동할 수 있는 정보.
    → "~하면 좋습니다" 식의 모호한 표현 절대 금지. 구체적이고 솔직하게.
+
+[최신 정보 원칙 — 제품·서비스·가격 언급 시 필수]
+오늘 날짜: {datetime.now().strftime('%Y년 %m월 %d일')}
+- 특정 제품 모델명 추천 시: 출시 2년 이내 제품만 언급. 단종·단산 가능성이 있는 구형 모델 금지.
+- 모델명이 불확실하면: 모델명 대신 스펙/가격대/브랜드 계열로 설명.
+  ❌ "다이슨 HD08 추천" → ✅ "다이슨 슈퍼소닉 최신 라인업 (20만원대)"
+  ❌ "샤오미 3세대" → ✅ "3만원대 가성비 드라이기"
+- 가격 수치: 구체적 가격 대신 "~만원대" 표현 사용.
+- 글 실용 파트 마지막에 한 줄 추가: "※ 가격·재고는 변동될 수 있으니 구매 전 최신 정보를 확인하세요."
+{freshness_section}
 
 [금지 주제 — 최근 발행됨, 의미상 비슷한 것도 피할 것]
 {avoid_str}
@@ -278,7 +290,17 @@ def post_lifestyle():
     if recent_posts:
         print(f"    발행글 {len(recent_posts)}건 확인")
 
-    prompt = _build_prompt(theme, avoid_str, chat, internal_links)
+    # 최신 기사 검색 (90일 이내) — 단종 제품·구식 정보 방지
+    search_query = f"{theme['practical_keyword']} 추천 최신"
+    print(f"  🔍 최신 정보 수집 중: '{search_query}'")
+    articles = search_recent_articles(search_query, count=6, days=90)
+    freshness_section = build_freshness_section(search_query, articles)
+    if articles:
+        print(f"    최신 기사 {len(articles)}건 확인")
+    else:
+        print("    최신 기사 없음 (프롬프트 날짜 규칙으로 대체)")
+
+    prompt = _build_prompt(theme, avoid_str, chat, internal_links, freshness_section)
 
     client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
     print("  Claude API 호출 중 (라이프스타일)...")

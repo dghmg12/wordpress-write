@@ -1,15 +1,17 @@
 """
-trending.py - Reddit / YouTube / Google Trends 인기 콘텐츠 수집
+trending.py - Reddit / YouTube / Google Trends / Google News 콘텐츠 수집
 
 API 키 불필요:
   - Reddit: 공개 JSON API (User-Agent만 설정)
-  - YouTube: 채널 RSS 피드 (조회수 없이 최신 영상)
+  - YouTube: 채널 RSS 피드
   - Google Trends: 일별 트렌딩 검색어 RSS
+  - Google News: 검색어 기반 RSS (최신 기사)
 """
 import requests
 import feedparser
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
+from urllib.parse import quote_plus
 
 # ── Reddit 서브레딧 ────────────────────────────────────────
 SPACE_SUBS    = ['space', 'SpaceXLounge', 'RocketLab', 'nasa', 'aerospace']
@@ -173,4 +175,56 @@ def build_trending_section(data: dict) -> str:
     if data.get('trends'):
         lines.append("\n▶ Google Trends 관련 키워드: " + ", ".join(data['trends'][:10]))
 
+    return "\n".join(lines)
+
+
+def search_recent_articles(query: str, count: int = 6, days: int = 90) -> list[dict]:
+    """Google News RSS로 최신 기사 검색 (API 키 불필요).
+
+    Returns: [{"title": str, "summary": str, "published": str}]
+    """
+    url = (
+        f"https://news.google.com/rss/search"
+        f"?q={quote_plus(query)}&hl=ko&gl=KR&ceid=KR:ko"
+    )
+    try:
+        feed = feedparser.parse(url)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        results = []
+        for entry in feed.entries:
+            pub = entry.get("published_parsed")
+            if pub:
+                pub_dt = datetime(*pub[:6], tzinfo=timezone.utc)
+                if pub_dt < cutoff:
+                    continue
+            title = entry.get("title", "").strip()
+            summary = BeautifulSoup(entry.get("summary", ""), "html.parser").get_text()[:120]
+            if title:
+                results.append({
+                    "title": title,
+                    "summary": summary.strip(),
+                    "published": entry.get("published", ""),
+                })
+            if len(results) >= count:
+                break
+        return results
+    except Exception as e:
+        print(f"  ⚠ Google News 검색 실패 ({query}): {e}")
+        return []
+
+
+def build_freshness_section(query: str, articles: list[dict]) -> str:
+    """최신 기사 목록을 프롬프트용 문자열로 변환"""
+    if not articles:
+        return ""
+    lines = [
+        f"[최신 참고 자료 — '{query}' 관련 최근 기사]",
+        "아래 최신 기사 제목을 참고해 현재 트렌드를 파악하고, "
+        "글에 언급할 제품·서비스·팁이 여전히 유효한지 확인하라.\n",
+    ]
+    for a in articles:
+        pub = a["published"][:16] if a["published"] else ""
+        lines.append(f"  - {a['title']}" + (f" ({pub})" if pub else ""))
+        if a["summary"]:
+            lines.append(f"    → {a['summary']}")
     return "\n".join(lines)
