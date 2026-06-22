@@ -28,6 +28,7 @@ from writer import parse_output, build_internal_links_prompt, build_seo_prompt
 from wordpress import publish_post, fetch_recent_posts
 from images import fetch_featured_image, fetch_multiple_images
 from topic_tracker import get_recent_keywords, get_recent_titles, save_topic
+from stocks import build_stock_section
 from trending import fetch_all_trending, build_trending_section
 
 # ★ newbicon 카테고리 ID — WordPress 관리자 → 카테고리에서 확인 후 입력
@@ -180,13 +181,16 @@ def _economy_format_rules() -> str:
 def _meta_output_rules() -> str:
     return """\
 ---
-글 본문이 끝나면 반드시 아래 5줄 출력. 절대 빠뜨리지 말 것.
+글 본문이 끝나면 반드시 아래 6줄 출력. 절대 빠뜨리지 말 것.
 FOCUS_KEYWORD: 핵심 검색어(2~4단어)
 SEO_TITLE: SEO 제목(60자 이내, 포커스 키워드 앞쪽)
 SEO_DESCRIPTION: 메타 설명(150~160자, 포커스 키워드 포함, 클릭 유도)
 IMAGE_QUERY: 글 핵심 장면 영어 3~5단어 (로켓·위성·우주 산업 관련 구체적 장면)
   예) "rocket launch commercial space" / "satellite constellation orbit" / "defense aerospace contract"
-TAGS: 태그1,태그2,태그3,태그4,태그5"""
+TAGS: 태그1,태그2,태그3,태그4,태그5
+TICKERS: 글에서 직접 언급한 상장 종목을 TradingView 형식으로. 없으면 없음.
+  형식: EXCHANGE:SYMBOL (쉼표 구분, 최대 3개)
+  예) NASDAQ:RKLB,TSX:MDA / KRX:010140,NYSE:BA / 없음"""
 
 
 # ── 월: 글로벌 우주 경제 뉴스 분석 ──────────────────────────
@@ -690,9 +694,21 @@ def _run_and_publish(prompt: str, mode: str) -> dict:
     if body_images:
         print(f"  본문 이미지: {len(body_images)}장")
 
+    # 종목 차트 + AI 분석 섹션 (경제 포스트에만)
+    tickers = result.get('tickers', [])
+    content_html = result['content_html']
+    if tickers:
+        stock_section = build_stock_section(
+            tickers_raw=tickers,
+            post_excerpt=result['content_markdown'][:1500],
+            client=client,
+        )
+        if stock_section:
+            content_html = content_html + "\n\n" + stock_section
+
     post_result = publish_post(
         title=result['title'],
-        content_html=result['content_html'],
+        content_html=content_html,
         excerpt=result.get('excerpt', ''),
         tags=result['tags'],
         category_id=CATEGORY_ID,

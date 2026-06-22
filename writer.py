@@ -275,12 +275,17 @@ def parse_output(raw: str, blog_name: str = "블로그") -> dict:
     seo_title    = extract(r"^SEO_TITLE:\s*(.+)$")
     seo_desc     = extract(r"^SEO_DESCRIPTION:\s*(.+)$")
     image_query  = extract(r"^IMAGE_QUERY:\s*(.+)$")
+    tickers_raw  = extract(r"^TICKERS:\s*(.+)$")
 
     tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+    tickers = [
+        t.strip() for t in tickers_raw.split(",")
+        if t.strip() and t.strip() not in ("없음", "N/A", "-")
+    ] if tickers_raw else []
 
     # 메타 줄 전부 제거
     body = re.sub(
-        r"^(TAGS|EXCERPT|FOCUS_KEYWORD|SEO_TITLE|SEO_DESCRIPTION|IMAGE_QUERY):.*$",
+        r"^(TAGS|EXCERPT|FOCUS_KEYWORD|SEO_TITLE|SEO_DESCRIPTION|IMAGE_QUERY|TICKERS):.*$",
         "",
         raw,
         flags=re.MULTILINE,
@@ -307,6 +312,8 @@ def parse_output(raw: str, blog_name: str = "블로그") -> dict:
         "seo_title": seo_title or title,
         "seo_description": seo_desc or excerpt,
         "image_query": image_query or focus_kw or title[:30],
+        # 종목 차트·분석용
+        "tickers": tickers,
     }
 
 
