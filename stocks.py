@@ -17,27 +17,31 @@ DISCLAIMER = (
 
 
 def _tradingview_widget(tv_symbol: str, widget_id: str) -> str:
-    """TradingView Mini Symbol Overview Widget HTML"""
-    return f"""  <div class="tradingview-widget-container" style="margin-bottom:12px;">
-    <div id="{widget_id}"></div>
-    <div style="font-size:.72em;color:#999;margin-top:2px;">
-      <a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">TradingView</a>
-    </div>
-    <script type="text/javascript"
-      src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-      async>
-    {{
-      "symbol": "{tv_symbol}",
-      "width": "100%",
-      "height": 200,
-      "locale": "kr",
-      "dateRange": "1M",
-      "colorTheme": "light",
-      "isTransparent": false,
-      "autosize": true
-    }}
-    </script>
-  </div>"""
+    """TradingView Mini Chart — iframe 방식 (script 태그 없이 WAF 차단 우회)"""
+    import json
+    params = json.dumps({
+        "symbol": tv_symbol,
+        "dateRange": "1M",
+        "colorTheme": "light",
+        "locale": "kr",
+        "isTransparent": False,
+        "autosize": True,
+        "width": "100%",
+        "height": 220,
+    }, ensure_ascii=False)
+    from urllib.parse import quote
+    encoded = quote(params)
+    src = f"https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=kr#{encoded}"
+    return (
+        f'<div style="margin-bottom:12px;">'
+        f'<iframe src="{src}" '
+        f'id="{widget_id}" width="100%" height="220" frameborder="0" '
+        f'allowtransparency="true" scrolling="no" '
+        f'style="border:none;display:block;"></iframe>'
+        f'<div style="font-size:.72em;color:#999;margin-top:2px;">'
+        f'<a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">TradingView</a>'
+        f'</div></div>'
+    )
 
 
 def _parse_ticker(raw: str) -> dict | None:
