@@ -16,8 +16,26 @@ DISCLAIMER = (
 )
 
 
+_KRX_EXCHANGES = {"KRX", "KOSPI", "KOSDAQ"}
+
+
+def _naver_chart_widget(symbol: str) -> str:
+    """한국 주식 → 네이버 금융 차트 이미지 (TradingView KRX 심볼 제한 우회)"""
+    img_url = f"https://ssl.pstatic.net/imgfinance/chart/item/area/3month/{symbol}.png"
+    link_url = f"https://finance.naver.com/item/main.naver?code={symbol}"
+    return (
+        f'<div style="margin-bottom:16px;">'
+        f'<a href="{link_url}" target="_blank" rel="noopener nofollow">'
+        f'<img src="{img_url}" alt="{symbol} 주가 차트 (3개월)" loading="lazy" '
+        f'style="width:100%;border-radius:8px;display:block;"></a>'
+        f'<div style="font-size:.72em;color:#999;margin-top:3px;">'
+        f'차트 제공: <a href="{link_url}" rel="noopener nofollow" target="_blank">네이버 금융</a>'
+        f'</div></div>'
+    )
+
+
 def _tradingview_widget(tv_symbol: str, widget_id: str) -> str:
-    """TradingView 차트 iframe — widgetembed URL (script 태그 없이 실제 차트 표시)"""
+    """해외 주식 → TradingView widgetembed iframe"""
     from urllib.parse import urlencode
     params = urlencode({
         "frameElementId": widget_id,
@@ -31,19 +49,26 @@ def _tradingview_widget(tv_symbol: str, widget_id: str) -> str:
         "locale": "kr",
         "toolbarbg": "f1f3f6",
         "withdateranges": "1",
-        "hide_side_toolbar": "0",
     })
     src = f"https://s.tradingview.com/widgetembed/?{params}"
     return (
         f'<div style="margin-bottom:16px;">'
-        f'<iframe src="{src}" '
-        f'id="{widget_id}" width="100%" height="300" frameborder="0" '
+        f'<iframe src="{src}" id="{widget_id}" width="100%" height="300" frameborder="0" '
         f'allowtransparency="true" scrolling="no" allow="clipboard-write" '
         f'style="border:none;display:block;border-radius:8px;"></iframe>'
         f'<div style="font-size:.72em;color:#999;margin-top:3px;">'
         f'차트 제공: <a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">TradingView</a>'
         f'</div></div>'
     )
+
+
+def _chart_widget(tv_symbol: str, widget_id: str) -> str:
+    """거래소에 따라 네이버 금융(KRX) 또는 TradingView(해외) 차트 반환"""
+    exchange = tv_symbol.split(":")[0].upper() if ":" in tv_symbol else ""
+    symbol = tv_symbol.split(":")[1] if ":" in tv_symbol else tv_symbol
+    if exchange in _KRX_EXCHANGES:
+        return _naver_chart_widget(symbol)
+    return _tradingview_widget(tv_symbol, widget_id)
 
 
 def _parse_ticker(raw: str) -> dict | None:
@@ -115,9 +140,9 @@ def build_stock_section(tickers_raw: list[str], post_excerpt: str,
 
     print(f"  📊 종목 AI 분석 생성 중: {[t['tv'] for t in ticker_infos]}")
 
-    # TradingView 위젯 HTML
+    # 차트 위젯 HTML (KRX → 네이버 금융 이미지, 해외 → TradingView iframe)
     widgets_html = "\n".join(
-        _tradingview_widget(t["tv"], f"tv_{i}")
+        _chart_widget(t["tv"], f"tv_{i}")
         for i, t in enumerate(ticker_infos)
     )
 
