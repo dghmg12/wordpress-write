@@ -17,29 +17,31 @@ DISCLAIMER = (
 
 
 def _tradingview_widget(tv_symbol: str, widget_id: str) -> str:
-    """TradingView Mini Chart — iframe 방식 (script 태그 없이 WAF 차단 우회)"""
-    import json
-    params = json.dumps({
+    """TradingView 차트 iframe — widgetembed URL (script 태그 없이 실제 차트 표시)"""
+    from urllib.parse import urlencode
+    params = urlencode({
+        "frameElementId": widget_id,
         "symbol": tv_symbol,
-        "dateRange": "1M",
-        "colorTheme": "light",
+        "interval": "D",
+        "hidesidetoolbar": "1",
+        "hideideas": "1",
+        "theme": "light",
+        "style": "1",
+        "timezone": "Asia/Seoul",
         "locale": "kr",
-        "isTransparent": False,
-        "autosize": True,
-        "width": "100%",
-        "height": 220,
-    }, ensure_ascii=False)
-    from urllib.parse import quote
-    encoded = quote(params)
-    src = f"https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=kr#{encoded}"
+        "toolbarbg": "f1f3f6",
+        "withdateranges": "1",
+        "hide_side_toolbar": "0",
+    })
+    src = f"https://s.tradingview.com/widgetembed/?{params}"
     return (
-        f'<div style="margin-bottom:12px;">'
+        f'<div style="margin-bottom:16px;">'
         f'<iframe src="{src}" '
-        f'id="{widget_id}" width="100%" height="220" frameborder="0" '
-        f'allowtransparency="true" scrolling="no" '
-        f'style="border:none;display:block;"></iframe>'
-        f'<div style="font-size:.72em;color:#999;margin-top:2px;">'
-        f'<a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">TradingView</a>'
+        f'id="{widget_id}" width="100%" height="300" frameborder="0" '
+        f'allowtransparency="true" scrolling="no" allow="clipboard-write" '
+        f'style="border:none;display:block;border-radius:8px;"></iframe>'
+        f'<div style="font-size:.72em;color:#999;margin-top:3px;">'
+        f'차트 제공: <a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">TradingView</a>'
         f'</div></div>'
     )
 
