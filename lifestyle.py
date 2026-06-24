@@ -7,7 +7,7 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import os
 import random
 from datetime import datetime
-import anthropic
+from llm import call_llm
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -302,14 +302,8 @@ def post_lifestyle():
 
     prompt = _build_prompt(theme, avoid_str, chat, internal_links, freshness_section)
 
-    client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
-    print("  Claude API 호출 중 (라이프스타일)...")
-    msg = client.messages.create(
-        model='claude-sonnet-4-6',
-        max_tokens=8096,
-        messages=[{'role': 'user', 'content': prompt}],
-    )
-    raw = msg.content[0].text
+    print("  Gemini API 호출 중 (라이프스타일)...")
+    raw = call_llm(prompt, max_tokens=8096, use_search=True)
     result = parse_output(raw, blog_name=BLOG_NAME)
 
     print(f"  제목: {result['title']}")

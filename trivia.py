@@ -7,7 +7,7 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import os
 import random
 from datetime import datetime
-import anthropic
+from llm import call_llm
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -162,8 +162,6 @@ def post_trivia():
     if recent_posts:
         print(f"    발행글 {len(recent_posts)}건 확인")
 
-    client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
-
     prompt = f"""아래 조건에 맞는 잡학 블로그 글을 써라.
 
 {topic_prompt}
@@ -242,13 +240,8 @@ IMAGE_QUERY: 글 핵심 장면 영어 3~5단어 (구체적 사물/장면, 추상
       하품 전염 → "person yawning tired face closeup"
 TAGS: 태그1,태그2,태그3,태그4,태그5"""
 
-    print("  Claude API 호출 중 (잡학)...")
-    msg = client.messages.create(
-        model='claude-sonnet-4-6',
-        max_tokens=8096,
-        messages=[{'role': 'user', 'content': prompt}],
-    )
-    raw = msg.content[0].text
+    print("  Gemini API 호출 중 (잡학)...")
+    raw = call_llm(prompt, max_tokens=8096, use_search=True)
     result = parse_output(raw, blog_name=BLOG_NAME)
 
     print(f"  제목: {result['title']}")

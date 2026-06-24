@@ -29,6 +29,7 @@ jobs:
       - name: 자동 포스팅 실행
         env:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY:     ${{ secrets.GOOGLE_API_KEY }}
           WP_URL:             ${{ secrets.WP_URL }}
           WP_USER:            ${{ secrets.WP_USER }}
           WP_APP_PASSWORD:    ${{ secrets.WP_APP_PASSWORD }}

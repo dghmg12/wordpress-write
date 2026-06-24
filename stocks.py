@@ -7,7 +7,7 @@ stocks.py - 뉴비콘 종목 차트(TradingView) + AI 분석 섹션 생성
   - 외부 주가 API: 불필요 (TradingView 위젯이 실시간 데이터 표시)
 """
 import re
-import anthropic
+from llm import call_llm
 
 DISCLAIMER = (
     "※ 이 분석은 AI가 생성한 정보 제공 목적의 콘텐츠입니다. "
@@ -85,9 +85,8 @@ def _parse_ticker(raw: str) -> dict | None:
     return {"tv": raw, "exchange": "", "symbol": raw.upper()}
 
 
-def _generate_analysis(ticker_infos: list[dict], post_excerpt: str,
-                       client: anthropic.Anthropic) -> str:
-    """Claude로 종목 AI 분석 단락 생성"""
+def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
+    """Gemini로 종목 AI 분석 단락 생성"""
     if not ticker_infos:
         return ""
 
@@ -113,19 +112,13 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str,
 분석 텍스트만 출력."""
 
     try:
-        msg = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=600,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return msg.content[0].text.strip()
+        return call_llm(prompt, max_tokens=600, use_search=False).strip()
     except Exception as e:
         print(f"  ⚠ 종목 분석 생성 오류: {e}")
         return ""
 
 
-def build_stock_section(tickers_raw: list[str], post_excerpt: str,
-                        client: anthropic.Anthropic) -> str:
+def build_stock_section(tickers_raw: list[str], post_excerpt: str) -> str:
     """
     종목 차트(TradingView) + AI 분석 + 면책 문구 HTML 블록 반환.
     tickers_raw: ["NASDAQ:RKLB", "TSX:MDA", "KRX:010140"] 형식 리스트
@@ -147,7 +140,7 @@ def build_stock_section(tickers_raw: list[str], post_excerpt: str,
     )
 
     # AI 분석
-    analysis_raw = _generate_analysis(ticker_infos, post_excerpt, client)
+    analysis_raw = _generate_analysis(ticker_infos, post_excerpt)
     if analysis_raw:
         analysis_raw = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", analysis_raw)
         paragraphs = [p.strip() for p in analysis_raw.split("\n") if p.strip()]

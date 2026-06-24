@@ -18,7 +18,7 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import os
 import random
 import feedparser
-import anthropic
+from llm import call_llm
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
@@ -677,15 +677,8 @@ NASA, ESA, Space.com, Universe Today, 한국천문연구원, 한국어 위키백
 
 # ── 공통 실행·발행 ─────────────────────────────────────────
 def _run_and_publish(prompt: str, mode: str) -> dict:
-    client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
-
-    print(f"  Claude API 호출 중 ({mode})...")
-    msg = client.messages.create(
-        model='claude-sonnet-4-6',
-        max_tokens=8096,
-        messages=[{'role': 'user', 'content': prompt}],
-    )
-    raw = msg.content[0].text
+    print(f"  Gemini API 호출 중 ({mode})...")
+    raw = call_llm(prompt, max_tokens=8096, use_search=True)
     result = parse_output(raw, blog_name=BLOG_NAME)
 
     print(f"  제목: {result['title']}")
@@ -709,7 +702,6 @@ def _run_and_publish(prompt: str, mode: str) -> dict:
         stock_section = build_stock_section(
             tickers_raw=tickers,
             post_excerpt=result['content_markdown'][:1500],
-            client=client,
         )
         if stock_section:
             content_html = content_html + "\n\n" + stock_section
