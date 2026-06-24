@@ -102,17 +102,18 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
 {ticker_list}
 
 [작성 규칙]
-- 각 종목당 3~4문장. 전체 150~300자.
-- 사업 핵심 + 최근 동향 + 투자 관심 포인트(리스크 포함).
+- 각 종목당 2~3문장. 종목별로 빈 줄로 구분.
+- 사업 핵심 + 최근 동향 + 리스크 한 줄.
 - 말투: 친근한 평어체 (~다, ~이다).
 - "매수·매도 추천" 직접 표현 절대 금지.
 - 굵게(**bold**) 사용 가능. ## 헤딩 없이 본문만 출력.
 - 면책 문구는 별도 추가되므로 포함 금지.
+- 인용 출처 표기([cite:...]) 절대 금지.
 
-분석 텍스트만 출력."""
+분석 텍스트만 출력. 절대 잘리지 말 것."""
 
     try:
-        return call_llm(prompt, max_tokens=600, use_search=False).strip()
+        return call_llm(prompt, max_tokens=1500, use_search=False).strip()
     except Exception as e:
         print(f"  ⚠ 종목 분석 생성 오류: {e}")
         return ""

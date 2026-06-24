@@ -22,15 +22,14 @@ def call_llm(prompt: str, max_tokens: int = 8096, use_search: bool = True) -> st
     """
     client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
 
-    tools = [types.Tool(google_search=types.GoogleSearch())] if use_search else []
+    config = types.GenerateContentConfig(max_output_tokens=max_tokens)
+    if use_search:
+        config.tools = [types.Tool(google_search=types.GoogleSearch())]
 
     response = client.models.generate_content(
         model=MODEL,
         contents=prompt,
-        config=types.GenerateContentConfig(
-            tools=tools,
-            max_output_tokens=max_tokens,
-        ),
+        config=config,
     )
     text = response.text or ""
     return _CITE_RE.sub("", text)
