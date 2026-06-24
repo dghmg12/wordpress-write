@@ -348,35 +348,151 @@ def _fetch_pixabay_featured(query: str, api_key: str) -> dict | None:
     return None
 
 
+def _fetch_openverse_illustrations_multiple(query: str, count: int) -> list[dict]:
+    """OpenVerse — 일러스트 카테고리 한정"""
+    try:
+        resp = requests.get(
+            "https://api.openverse.org/v1/images/",
+            params={
+                "q": query,
+                "page_size": min(count * 3, 20),
+                "license_type": "commercial",
+                "category": "illustration",
+                "mature": "false",
+            },
+            headers={"User-Agent": "NewbiconSpaceBot/1.0 (blog automation, educational)"},
+            timeout=10,
+        )
+        if not resp.ok:
+            return []
+        results = resp.json().get("results", [])
+        random.shuffle(results)
+        return [
+            {
+                "url":    r["url"],
+                "alt":    r.get("title", query),
+                "credit": f"{r.get('creator', 'OpenVerse')} / OpenVerse ({r.get('license', 'CC').upper()})",
+                "source": "openverse",
+            }
+            for r in results[:count]
+            if r.get("url")
+        ]
+    except Exception as e:
+        print(f"  ⚠ OpenVerse 일러스트 오류: {e}")
+    return []
+
+
+def _fetch_pixabay_illustrations_multiple(query: str, api_key: str, count: int) -> list[dict]:
+    """Pixabay — image_type=illustration 한정"""
+    try:
+        fetch_count = min(max(count * 4, 15), 50)
+        page = random.randint(1, 3)
+        resp = requests.get(
+            "https://pixabay.com/api/",
+            params={
+                "key": api_key,
+                "q": query,
+                "image_type": "illustration",
+                "orientation": "horizontal",
+                "per_page": fetch_count,
+                "page": page,
+                "safesearch": "true",
+            },
+            timeout=10,
+        )
+        hits = resp.json().get("hits", []) if resp.ok else []
+        if not hits:
+            resp2 = requests.get(
+                "https://pixabay.com/api/",
+                params={
+                    "key": api_key,
+                    "q": query,
+                    "image_type": "illustration",
+                    "orientation": "horizontal",
+                    "per_page": fetch_count,
+                    "safesearch": "true",
+                },
+                timeout=10,
+            )
+            hits = resp2.json().get("hits", []) if resp2.ok else []
+        random.shuffle(hits)
+        return [
+            {
+                "url":    h["largeImageURL"],
+                "alt":    query,
+                "credit": f"Image by {h['user']} on Pixabay",
+                "source": "pixabay",
+            }
+            for h in hits[:count]
+        ]
+    except Exception as e:
+        print(f"  ⚠ Pixabay 일러스트 오류: {e}")
+    return []
+
+
 def fetch_multiple_images(query: str, count: int = 4, nasa: bool = False) -> list[dict]:
     """
-    글 주제에 맞는 무료 이미지 여러 장 검색 (중복 없이)
-    nasa=True: NASA → Wikimedia → OpenVerse → Pexels → Pixabay 순으로 채움
-    nasa=False: OpenVerse → Wikimedia → Pexels → Pixabay 순으로 채움
+    글 주제에 맞는 무료 이미지 여러 장 검색 (사진 + 일러스트 혼합)
+    - 사진 슬롯: ceil(count/2) — 실사 사진
+    - 일러스트 슬롯: floor(count/2) — 디지털 아트·일러스트
+    - 모자라면 상대방 유형으로 보충
     반환: [{"url": str, "alt": str, "credit": str}, ...]
     """
-    results = []
     pexels_key  = os.environ.get("PEXELS_API_KEY", "").strip()
     pixabay_key = os.environ.get("PIXABAY_API_KEY", "").strip()
 
-    def _fill(fetch_fn, *args):
-        if len(results) >= count:
+    photo_target  = (count + 1) // 2   # ceil
+    illust_target = count // 2          # floor
+
+    # ── 사진 수집 ─────────────────────────────────────────────
+    photos: list[dict] = []
+
+    def _fill_photos(fetch_fn, *args):
+        if len(photos) >= photo_target:
             return
-        needed = count - len(results)
-        results.extend(fetch_fn(*args, needed))
+        needed = photo_target - len(photos)
+        photos.extend(fetch_fn(*args, needed))
 
     if nasa:
-        _fill(_fetch_nasa_multiple, query)
-    _fill(_fetch_openverse_multiple, query)
-    _fill(_fetch_wikimedia_multiple, query)
+        _fill_photos(_fetch_nasa_multiple, query)
+    _fill_photos(_fetch_openverse_multiple, query)
+    _fill_photos(_fetch_wikimedia_multiple, query)
     if pexels_key:
-        _fill(_fetch_pexels_multiple, query, pexels_key)
+        _fill_photos(_fetch_pexels_multiple, query, pexels_key)
     if pixabay_key:
-        _fill(_fetch_pixabay_multiple, query, pixabay_key)
+        _fill_photos(_fetch_pixabay_multiple, query, pixabay_key)
 
-    if not results:
+    # ── 일러스트 수집 ─────────────────────────────────────────
+    illusts: list[dict] = []
+
+    def _fill_illusts(fetch_fn, *args):
+        if len(illusts) >= illust_target:
+            return
+        needed = illust_target - len(illusts)
+        illusts.extend(fetch_fn(*args, needed))
+
+    if illust_target > 0:
+        _fill_illusts(_fetch_openverse_illustrations_multiple, query)
+        if pixabay_key:
+            _fill_illusts(_fetch_pixabay_illustrations_multiple, query, pixabay_key)
+
+    # ── 부족분 보충 (사진으로 일러스트 슬롯 대체, 반대도 가능) ─
+    combined = photos + illusts
+    if len(combined) < count:
+        all_photos = photos + illusts  # 이미 있는 것 제외
+        # 사진으로 추가 채움
+        if pexels_key:
+            extra = _fetch_pexels_multiple(query, pexels_key, count - len(combined))
+            combined.extend(extra)
+        if len(combined) < count and pixabay_key:
+            extra = _fetch_pixabay_multiple(query, pixabay_key, count - len(combined))
+            combined.extend(extra)
+
+    random.shuffle(combined)
+
+    if not combined:
         print("  ⚠ 이미지를 하나도 찾지 못했습니다.")
-    return results[:count]
+    return combined[:count]
 
 
 def _fetch_pexels_multiple(query: str, api_key: str, count: int) -> list[dict]:
