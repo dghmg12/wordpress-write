@@ -291,12 +291,21 @@ def parse_output(raw: str, blog_name: str = "블로그") -> dict:
         flags=re.MULTILINE,
     ).strip()
 
-    # 제목 추출
-    title = "자동 생성 포스트"
+    # 제목 추출 — "# 제목" 우선, 없으면 SEO_TITLE, 그것도 없으면 첫 번째 ## 헤딩
+    title = ""
     for line in body.split("\n"):
         if line.startswith("# "):
             title = line[2:].strip()
             break
+    if not title:
+        title = seo_title  # Gemini가 # 없이 출력할 때 폴백
+    if not title:
+        for line in body.split("\n"):
+            if line.startswith("## "):
+                title = line[3:].strip().lstrip("*").rstrip("*").strip()
+                break
+    if not title:
+        title = "자동 생성 포스트"
 
     # Markdown → HTML 변환 ([CHAT] 블록 포함)
     content_html = markdown_to_html(body, blog_name=blog_name)
