@@ -93,27 +93,30 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
     ticker_list = "\n".join(
         f"- {t['exchange']}:{t['symbol']}" for t in ticker_infos
     )
-    prompt = f"""우주·방산 관련 종목 분석을 한국어 블로그용으로 간략히 작성하라.
+    prompt = f"""아래 종목들을 한국어 블로그용으로 분석하라. 글 주제와 연결해서 설명할 것.
 
 [글 본문 요약 — 분석 컨텍스트]
-{post_excerpt[:1000]}
+{post_excerpt[:800]}
 
 [분석 대상 종목]
 {ticker_list}
 
-[작성 규칙]
-- 각 종목당 2~3문장. 종목별로 빈 줄로 구분.
-- 사업 핵심 + 최근 동향 + 리스크 한 줄.
-- 말투: 친근한 평어체 (~다, ~이다).
-- "매수·매도 추천" 직접 표현 절대 금지.
-- 굵게(**bold**) 사용 가능. ## 헤딩 없이 본문만 출력.
-- 면책 문구는 별도 추가되므로 포함 금지.
-- 인용 출처 표기([cite:...]) 절대 금지.
+[출력 형식 — 아래 HTML을 종목 수만큼 반복 출력. 다른 태그나 마크다운 절대 추가 금지]
+<strong>[기업 한국어명] ([티커심볼]) : [한 줄 핵심 포지셔닝 + 어울리는 이모지 1개]</strong>
+<ul style="margin-left:0">
+<li style="margin:.6em 0;"><strong>👍 매력 포인트:</strong> [이 기업이 글 주제와 어떻게 연결되는지 + 사업 강점. 2~3문장. 친근한 평어체.]</li>
+<li style="margin:.6em 0;"><strong>⚠️ 주의할 점: </strong>[리스크 또는 주의사항. 1~2문장. 친근한 평어체.]</li>
+</ul>
 
-분석 텍스트만 출력. 절대 잘리지 말 것."""
+[규칙]
+- "매수·매도 추천" 절대 금지.
+- 면책 문구 포함 금지 (별도 추가됨).
+- 인용 출처([cite:...]) 절대 금지.
+- HTML 태그 외 마크다운(**, ##, ---) 절대 금지.
+- 종목 순서대로 모두 작성. 절대 잘리지 말 것."""
 
     try:
-        return call_llm(prompt, max_tokens=1500, use_search=False).strip()
+        return call_llm(prompt, max_tokens=2500, use_search=False).strip()
     except Exception as e:
         print(f"  ⚠ 종목 분석 생성 오류: {e}")
         return ""
@@ -140,14 +143,8 @@ def build_stock_section(tickers_raw: list[str], post_excerpt: str) -> str:
         for i, t in enumerate(ticker_infos)
     )
 
-    # AI 분석
-    analysis_raw = _generate_analysis(ticker_infos, post_excerpt)
-    if analysis_raw:
-        analysis_raw = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", analysis_raw)
-        paragraphs = [p.strip() for p in analysis_raw.split("\n") if p.strip()]
-        analysis_html = "\n    ".join(f"<p style='margin:.6em 0;'>{p}</p>" for p in paragraphs)
-    else:
-        analysis_html = ""
+    # AI 분석 (Gemini가 HTML 직접 출력)
+    analysis_html = _generate_analysis(ticker_infos, post_excerpt)
 
     disclaimer_html = (
         f'<p style="font-size:.78em;color:#999;border-top:1px solid #e8e8e8;'
