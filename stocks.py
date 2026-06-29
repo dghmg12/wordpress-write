@@ -129,10 +129,29 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
         return ""
 
 
+def _ticker_block(t: dict, idx: int, post_excerpt: str) -> str:
+    """차트 1개 + AI 분석 버튼 1개 쌍 HTML 반환"""
+    chart_html = _chart_widget(t["tv"], f"tv_{idx}")
+    analysis_html = _generate_analysis([t], post_excerpt)
+    return (
+        f'{chart_html}'
+        f'<details style="margin-top:-4px;margin-bottom:20px;">'
+        f'<summary style="display:inline-flex;align-items:center;gap:6px;'
+        f'background:#1a1a2e;color:#fff;border-radius:20px;padding:8px 20px;'
+        f'font-size:.88em;font-weight:700;cursor:pointer;list-style:none;user-select:none;">'
+        f'🤖 AI 종목 분석</summary>'
+        f'<div style="margin-top:10px;padding:16px 16px 10px;background:#fff;'
+        f'border:1px solid #dde3ec;border-radius:10px;font-size:.93em;line-height:1.7;color:#333;">'
+        f'{analysis_html}'
+        f'</div>'
+        f'</details>'
+    )
+
+
 def build_stock_section(tickers_raw: list[str], post_excerpt: str) -> str:
     """
-    종목 차트 + AI 분석 팝업 버튼 HTML 블록 반환.
-    tickers_raw: ["NASDAQ:RKLB", "TSX:MDA", "KRX:010140"] 형식 리스트
+    종목별 (차트 + AI 분석 버튼) 쌍을 순서대로 나열한 HTML 블록 반환.
+    tickers_raw: ["NASDAQ:RKLB", "TSX:MDA", "KRX:012450"] 형식 리스트
     post_excerpt: 글 본문 텍스트 (분석 컨텍스트용)
     반환: Gutenberg wp:html 블록 문자열 (없으면 "")
     """
@@ -144,35 +163,21 @@ def build_stock_section(tickers_raw: list[str], post_excerpt: str) -> str:
 
     print(f"  📊 종목 AI 분석 생성 중: {[t['tv'] for t in ticker_infos]}")
 
-    # 차트 위젯 HTML
-    widgets_html = "\n".join(
-        _chart_widget(t["tv"], f"tv_{i}")
+    # 종목별 (차트 + 분석버튼) 쌍 생성
+    blocks = "\n".join(
+        _ticker_block(t, i, post_excerpt)
         for i, t in enumerate(ticker_infos)
     )
 
-    # AI 분석 (Gemini 직접 HTML 출력)
-    analysis_html = _generate_analysis(ticker_infos, post_excerpt)
-
     disclaimer_html = (
         f'<p style="font-size:.78em;color:#999;border-top:1px solid #e8e8e8;'
-        f'padding-top:.7em;margin-top:1em;line-height:1.5;">{DISCLAIMER}</p>'
+        f'padding-top:.7em;margin-top:.5em;line-height:1.5;">{DISCLAIMER}</p>'
     )
 
-    # <details>/<summary> — JS 없이 클릭으로 여닫는 순수 HTML5 방식
-    # NinjaFirewall이 onclick 등 JS 속성을 차단하므로 이 방식 사용
     return f"""<!-- wp:html -->
-<div style="margin:2em 0;padding:20px 20px 16px;background:#f8f9fb;border-radius:12px;border:1px solid #dde3ec;">
-  <p style="font-size:1em;font-weight:700;margin:0 0 12px;color:#1a1a2e;">📊 관련 종목 차트</p>
-  {widgets_html}
-  <details style="margin-top:8px;">
-    <summary style="display:inline-flex;align-items:center;gap:8px;background:#1a1a2e;color:#fff;border-radius:24px;padding:11px 24px;font-size:.93em;font-weight:700;cursor:pointer;list-style:none;user-select:none;">🤖 AI 종목 분석</summary>
-    <div style="margin-top:14px;padding:20px 18px;background:#fff;border:1px solid #dde3ec;border-radius:10px;">
-      <p style="font-size:1em;font-weight:700;margin:0 0 12px;color:#1a1a2e;">🤖 AI 종목 분석</p>
-      <div style="font-size:.93em;line-height:1.7;color:#333;">
-        {analysis_html}
-      </div>
-      {disclaimer_html}
-    </div>
-  </details>
+<div style="margin:2em 0;padding:20px 20px 12px;background:#f8f9fb;border-radius:12px;border:1px solid #dde3ec;">
+  <p style="font-size:1em;font-weight:700;margin:0 0 14px;color:#1a1a2e;">📊 관련 종목 차트</p>
+  {blocks}
+  {disclaimer_html}
 </div>
 <!-- /wp:html -->"""
