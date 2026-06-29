@@ -130,7 +130,7 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
 
 def build_stock_section(tickers_raw: list[str], post_excerpt: str) -> str:
     """
-    종목 차트(TradingView) + AI 분석 + 면책 문구 HTML 블록 반환.
+    종목 차트 + AI 분석 팝업 버튼 HTML 블록 반환.
     tickers_raw: ["NASDAQ:RKLB", "TSX:MDA", "KRX:010140"] 형식 리스트
     post_excerpt: 글 본문 텍스트 (분석 컨텍스트용)
     반환: Gutenberg wp:html 블록 문자열 (없으면 "")
@@ -143,13 +143,13 @@ def build_stock_section(tickers_raw: list[str], post_excerpt: str) -> str:
 
     print(f"  📊 종목 AI 분석 생성 중: {[t['tv'] for t in ticker_infos]}")
 
-    # 차트 위젯 HTML (KRX → 네이버 금융 이미지, 해외 → TradingView iframe)
+    # 차트 위젯 HTML
     widgets_html = "\n".join(
         _chart_widget(t["tv"], f"tv_{i}")
         for i, t in enumerate(ticker_infos)
     )
 
-    # AI 분석 (Gemini가 HTML 직접 출력)
+    # AI 분석 (Gemini 직접 HTML 출력)
     analysis_html = _generate_analysis(ticker_infos, post_excerpt)
 
     disclaimer_html = (
@@ -157,14 +157,21 @@ def build_stock_section(tickers_raw: list[str], post_excerpt: str) -> str:
         f'padding-top:.7em;margin-top:1em;line-height:1.5;">{DISCLAIMER}</p>'
     )
 
+    # <details>/<summary> — JS 없이 클릭으로 여닫는 순수 HTML5 방식
+    # NinjaFirewall이 onclick 등 JS 속성을 차단하므로 이 방식 사용
     return f"""<!-- wp:html -->
 <div style="margin:2em 0;padding:20px 20px 16px;background:#f8f9fb;border-radius:12px;border:1px solid #dde3ec;">
   <p style="font-size:1em;font-weight:700;margin:0 0 12px;color:#1a1a2e;">📊 관련 종목 차트</p>
   {widgets_html}
-  <p style="font-size:1em;font-weight:700;margin:16px 0 8px;color:#1a1a2e;">🤖 AI 종목 분석</p>
-  <div style="font-size:.93em;line-height:1.7;color:#333;">
-    {analysis_html}
-  </div>
-  {disclaimer_html}
+  <details style="margin-top:8px;">
+    <summary style="display:inline-flex;align-items:center;gap:8px;background:#1a1a2e;color:#fff;border-radius:24px;padding:11px 24px;font-size:.93em;font-weight:700;cursor:pointer;list-style:none;user-select:none;">🤖 AI 종목 분석</summary>
+    <div style="margin-top:14px;padding:20px 18px;background:#fff;border:1px solid #dde3ec;border-radius:10px;">
+      <p style="font-size:1em;font-weight:700;margin:0 0 12px;color:#1a1a2e;">🤖 AI 종목 분석</p>
+      <div style="font-size:.93em;line-height:1.7;color:#333;">
+        {analysis_html}
+      </div>
+      {disclaimer_html}
+    </div>
+  </details>
 </div>
 <!-- /wp:html -->"""
