@@ -6,6 +6,7 @@ Google Search Grounding을 사용하면 모델이 실시간 웹 검색 결과를
 """
 import os
 import re
+import time
 from google import genai
 from google.genai import types
 
@@ -14,10 +15,13 @@ MODEL = "gemini-2.5-flash"
 # Search Grounding이 붙이는 인용 마커 패턴 제거용
 _CITE_RE = re.compile(r"\s*\[cite:\s*[\d,\s]+\]", re.IGNORECASE)
 
+_RETRY_DELAYS = [10, 30, 60]  # 503 발생 시 재시도 대기 시간(초)
+
 
 def call_llm(prompt: str, max_tokens: int = 8096, use_search: bool = True) -> str:
     """
     Gemini API 호출. use_search=True면 Google Search Grounding 활성화.
+    503 일시적 과부하 오류는 최대 3회 재시도.
     반환: 생성된 텍스트 문자열 (인용 마커 제거됨)
     """
     client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
@@ -26,10 +30,24 @@ def call_llm(prompt: str, max_tokens: int = 8096, use_search: bool = True) -> st
     if use_search:
         config.tools = [types.Tool(google_search=types.GoogleSearch())]
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=config,
-    )
-    text = response.text or ""
-    return _CITE_RE.sub("", text)
+    last_err = None
+    for attempt, delay in enumerate([0] + _RETRY_DELAYS):
+        if delay:
+            print(f"  ⏳ Gemini 503 — {delay}초 후 재시도 ({attempt}/{len(_RETRY_DELAYS)})...")
+            time.sleep(delay)
+        try:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=prompt,
+                config=config,
+            )
+            text = response.text or ""
+            return _CITE_RE.sub("", text)
+        except Exception as e:
+            err_str = str(e)
+            if "503" in err_str or "UNAVAILABLE" in err_str:
+                last_err = e
+                continue
+            raise  # 503 외 오류는 즉시 재발생
+
+    raise RuntimeError(f"Gemini API 재시도 {len(_RETRY_DELAYS)}회 실패: {last_err}")
