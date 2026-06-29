@@ -20,15 +20,21 @@ _KRX_EXCHANGES = {"KRX", "KOSPI", "KOSDAQ"}
 
 
 def _naver_chart_widget(symbol: str) -> str:
-    """한국 주식 → 네이버 금융 차트 이미지 (TradingView KRX 심볼 제한 우회)"""
-    img_url = f"https://ssl.pstatic.net/imgfinance/chart/item/area/3month/{symbol}.png"
+    """한국 주식 → 네이버 금융 링크 버튼.
+    ssl.pstatic.net 이미지는 Referer 검사로 외부 사이트에서 hotlink 차단됨.
+    """
     link_url = f"https://finance.naver.com/item/main.naver?code={symbol}"
     return (
         f'<div style="margin-bottom:16px;">'
-        f'<a href="{link_url}" target="_blank" rel="noopener nofollow">'
-        f'<img src="{img_url}" alt="{symbol} 주가 차트 (3개월)" loading="lazy" '
-        f'style="width:100%;border-radius:8px;display:block;"></a>'
-        f'<div style="font-size:.72em;color:#999;margin-top:3px;">'
+        f'<a href="{link_url}" target="_blank" rel="noopener nofollow" '
+        f'style="display:flex;align-items:center;justify-content:space-between;'
+        f'background:#f0f4ff;border:1px solid #d0d9f0;border-radius:10px;'
+        f'padding:14px 18px;text-decoration:none;color:#1a3a8f;">'
+        f'<span style="font-weight:700;font-size:.95em;">{symbol}</span>'
+        f'<span style="font-size:.85em;color:#3a5ccf;font-weight:600;">'
+        f'네이버 금융에서 차트 보기 →</span>'
+        f'</a>'
+        f'<div style="font-size:.72em;color:#999;margin-top:4px;padding-left:2px;">'
         f'차트 제공: <a href="{link_url}" rel="noopener nofollow" target="_blank">네이버 금융</a>'
         f'</div></div>'
     )
