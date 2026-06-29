@@ -198,7 +198,8 @@ TICKERS: 글 주제와 직접 관련된 상장 종목 1~3개. TradingView 형식
   - 글에서 직접 언급한 상장사 우선
   - 주제 기업이 비상장(SpaceX 등)이면, 글 본문에서 언급한 상장 경쟁사·파트너사·수혜 기업을 대신 기재
   형식: EXCHANGE:SYMBOL (쉼표 구분, 최대 3개)
-  예) NASDAQ:RKLB,TSX:MDA / KRX:010140,NYSE:BA / NASDAQ:LUNR,NYSE:BA / 없음"""
+  예) NASDAQ:RKLB,TSX:MDA / KRX:012450,NYSE:BA / NASDAQ:LUNR,NYSE:BA / 없음
+  ⚠ KRX 종목 코드는 반드시 구글 검색으로 확인 후 기재할 것. 틀리기 쉬운 예: 한화에어로스페이스=012450, 삼성전자=005930, 한국항공우주=047810, LIG넥스원=079550"""
 
 
 # ── 월: 글로벌 우주 경제 뉴스 분석 ──────────────────────────

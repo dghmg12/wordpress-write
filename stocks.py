@@ -98,6 +98,8 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
     )
     prompt = f"""아래 종목들을 한국어 블로그용으로 분석하라. 글 주제와 연결해서 설명할 것.
 
+⚠ 중요: 각 티커 심볼이 실제로 어떤 기업인지 먼저 확인하라. 특히 KRX 코드는 글 본문과 무관하게 코드 자체의 실제 기업명을 사용해야 한다. (예: KRX:010140 = 삼성중공업, KRX:012450 = 한화에어로스페이스)
+
 [글 본문 요약 — 분석 컨텍스트]
 {post_excerpt[:800]}
 
@@ -105,13 +107,14 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
 {ticker_list}
 
 [출력 형식 — 아래 HTML을 종목 수만큼 반복 출력. 다른 태그나 마크다운 절대 추가 금지]
-<strong>[기업 한국어명] ([티커심볼]) : [한 줄 핵심 포지셔닝 + 어울리는 이모지 1개]</strong>
+<strong>[티커 코드에 해당하는 실제 기업 한국어명] ([티커심볼]) : [한 줄 핵심 포지셔닝 + 어울리는 이모지 1개]</strong>
 <ul style="margin-left:0">
 <li style="margin:.6em 0;"><strong>👍 매력 포인트:</strong> [이 기업이 글 주제와 어떻게 연결되는지 + 사업 강점. 2~3문장. 친근한 평어체.]</li>
 <li style="margin:.6em 0;"><strong>⚠️ 주의할 점: </strong>[리스크 또는 주의사항. 1~2문장. 친근한 평어체.]</li>
 </ul>
 
 [규칙]
+- 기업명은 티커 코드 기준으로 확인한 실제 명칭 사용. 본문 컨텍스트에서 추측 금지.
 - "매수·매도 추천" 절대 금지.
 - 면책 문구 포함 금지 (별도 추가됨).
 - 인용 출처([cite:...]) 절대 금지.
@@ -119,7 +122,8 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
 - 종목 순서대로 모두 작성. 절대 잘리지 말 것."""
 
     try:
-        return call_llm(prompt, max_tokens=2500, use_search=False).strip()
+        # use_search=True: 티커 코드 → 실제 회사명 검증을 위해 검색 활성화
+        return call_llm(prompt, max_tokens=2500, use_search=True).strip()
     except Exception as e:
         print(f"  ⚠ 종목 분석 생성 오류: {e}")
         return ""
