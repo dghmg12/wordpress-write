@@ -348,9 +348,8 @@ def markdown_to_html(text: str, blog_name: str = "블로그") -> str:
 
 
 def _chat_to_html(chat_text: str, blog_name: str = "블로그") -> str:
-    """[CHAT] 블록 내용을 말풍선 HTML로 변환.
-    blog_name 발화는 왼쪽(흰 말풍선), 독자 발화는 오른쪽(회색 말풍선).
-    blog_name 글자만 빨간색으로 강조.
+    """[CHAT] 블록 → 말풍선 HTML.
+    블로그(왼쪽): 컬러 말풍선 / 독자(오른쪽): 회색 말풍선.
     """
     lines = [l.strip() for l in chat_text.split('\n') if l.strip()]
     msgs = []
@@ -368,34 +367,46 @@ def _chat_to_html(chat_text: str, blog_name: str = "블로그") -> str:
 
     rows = []
     for i, (role, speaker, content) in enumerate(msgs):
-        mb = 'margin-bottom:12px;' if i < len(msgs) - 1 else ''
+        mb = '14px' if i < len(msgs) - 1 else '0'
         styled_content = apply_inline(content)
+
         if role == 'blog':
+            # 왼쪽 말풍선 — 블로그 (진한 컬러, 꼬리 왼쪽 위)
             rows.append(
-                f'<div style="{mb}display:flex;align-items:flex-start;">'
-                f'<div style="max-width:85%;">'
-                f'<div style="font-size:.75em;font-weight:700;color:#F41414;margin-bottom:3px;">{speaker}</div>'
-                f'<div style="background:#fff;border:1px solid #e5e5e5;'
-                f'border-radius:4px 16px 16px 16px;padding:10px 14px;'
-                f'color:#333;font-size:.95em;line-height:1.65;">{styled_content}</div>'
+                f'<div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:{mb};">'
+                f'<div style="width:36px;height:36px;border-radius:50%;background:#F41414;'
+                f'display:flex;align-items:center;justify-content:center;flex-shrink:0;'
+                f'font-size:.7em;font-weight:700;color:#fff;letter-spacing:-.5px;">{speaker[:2]}</div>'
+                f'<div style="max-width:72%;">'
+                f'<div style="font-size:.72em;font-weight:700;color:#F41414;margin-bottom:4px;">{speaker}</div>'
+                f'<div style="background:#fff;border:1.5px solid #F41414;'
+                f'border-radius:4px 18px 18px 18px;padding:10px 15px;'
+                f'color:#222;font-size:.93em;line-height:1.7;word-break:keep-all;">{styled_content}</div>'
                 f'</div>'
                 f'</div>'
             )
         else:
+            # 오른쪽 말풍선 — 독자 (회색, 꼬리 오른쪽 위)
             rows.append(
-                f'<div style="{mb}display:flex;justify-content:flex-end;">'
-                f'<div style="max-width:85%;text-align:right;">'
-                f'<div style="font-size:.75em;font-weight:600;color:#aaa;margin-bottom:3px;">{speaker}</div>'
-                f'<div style="background:#f0f0f0;border-radius:16px 4px 16px 16px;'
-                f'padding:10px 14px;color:#333;font-size:.95em;line-height:1.65;">{styled_content}</div>'
+                f'<div style="display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;margin-bottom:{mb};">'
+                f'<div style="max-width:72%;text-align:right;">'
+                f'<div style="font-size:.72em;font-weight:600;color:#888;margin-bottom:4px;">{speaker}</div>'
+                f'<div style="background:#efefef;border-radius:18px 4px 18px 18px;'
+                f'padding:10px 15px;color:#222;font-size:.93em;line-height:1.7;'
+                f'word-break:keep-all;text-align:left;">{styled_content}</div>'
                 f'</div>'
+                f'<div style="width:36px;height:36px;border-radius:50%;background:#ddd;'
+                f'display:flex;align-items:center;justify-content:center;flex-shrink:0;'
+                f'font-size:.7em;font-weight:600;color:#666;">독자</div>'
                 f'</div>'
             )
 
     inner_html = '\n'.join(rows)
     return (
-        f'<div style="margin:2em 0;padding:18px 20px;background:#f9f9f9;'
-        f'border-radius:16px;border:1px solid #F41414;">\n'
+        f'<div style="margin:2em 0;padding:20px 18px 18px;background:#f8f8f8;'
+        f'border-radius:16px;border:1px solid #eee;">'
+        f'<div style="font-size:.75em;font-weight:700;color:#aaa;margin-bottom:14px;'
+        f'text-align:center;letter-spacing:.05em;">💬 대화</div>\n'
         f'{inner_html}\n'
         f'</div>'
     )
