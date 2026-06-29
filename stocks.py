@@ -108,7 +108,7 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
 
 [출력 형식 — 아래 HTML을 종목 수만큼 반복 출력. 다른 태그나 마크다운 절대 추가 금지]
 <strong>[티커 코드에 해당하는 실제 기업 한국어명] ([티커심볼]) : [한 줄 핵심 포지셔닝 + 어울리는 이모지 1개]</strong>
-<ul style="margin-left:0">
+<ul style="margin-left:0;padding-left:20px">
 <li style="margin:.6em 0;"><strong>👍 매력 포인트:</strong> [이 기업이 글 주제와 어떻게 연결되는지 + 사업 강점. 2~3문장. 친근한 평어체.]</li>
 <li style="margin:.6em 0;"><strong>⚠️ 주의할 점: </strong>[리스크 또는 주의사항. 1~2문장. 친근한 평어체.]</li>
 </ul>

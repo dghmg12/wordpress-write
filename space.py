@@ -715,7 +715,16 @@ def _run_and_publish(prompt: str, mode: str) -> dict:
             post_excerpt=result['content_markdown'][:1500],
         )
         if stock_section:
-            content_html = content_html + "\n\n" + stock_section
+            # "함께 읽으면 좋은 글" 섹션 바로 위에 삽입
+            marker = '<strong>📚 함께 읽으면 좋은 글</strong>'
+            if marker in content_html:
+                content_html = content_html.replace(
+                    marker,
+                    stock_section + "\n\n" + marker,
+                    1
+                )
+            else:
+                content_html = content_html + "\n\n" + stock_section
 
     post_result = publish_post(
         title=result['title'],
