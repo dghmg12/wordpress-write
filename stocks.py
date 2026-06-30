@@ -8,6 +8,7 @@ stocks.py - 뉴비콘 종목 차트(TradingView) + AI 분석 섹션 생성
 """
 import re
 from llm import call_llm
+from writer import _normalize_tone
 
 DISCLAIMER = (
     "※ 이 분석은 AI가 생성한 정보 제공 목적의 콘텐츠입니다. "
@@ -123,7 +124,7 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
 
     try:
         # use_search=True: 티커 코드 → 실제 회사명 검증을 위해 검색 활성화
-        return call_llm(prompt, max_tokens=2500, use_search=True).strip()
+        return _normalize_tone(call_llm(prompt, max_tokens=2500, use_search=True).strip())
     except Exception as e:
         print(f"  ⚠ 종목 분석 생성 오류: {e}")
         return ""

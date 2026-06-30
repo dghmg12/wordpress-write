@@ -261,6 +261,58 @@ EXCERPT: 150자 이내 한국어 발췌문"""
     return parse_output(raw, blog_name=blog_name)
 
 
+_CHAT_BLOCK_RE = re.compile(r"\[CHAT\].*?\[/CHAT\]", re.DOTALL)
+
+# 과거형 어미: 받침이 'ㅆ'인 음절(했/갔/왔/컸/있...) + "습니다" → 그 음절 + "다"
+# 예: 했습니다→했다, 도달했습니다→도달했다, 있습니다→있다
+_PAST_TENSE_RE = re.compile(r"([가-힣])습니다")
+
+
+def _has_ssang_siot_batchim(ch: str) -> bool:
+    code = ord(ch)
+    if 0xAC00 <= code <= 0xD7A3:
+        return (code - 0xAC00) % 28 == 20  # 받침 'ㅆ'의 인덱스
+    return False
+
+
+def _fix_past_tense(m: re.Match) -> str:
+    ch = m.group(1)
+    return f"{ch}다" if _has_ssang_siot_batchim(ch) else m.group(0)
+
+
+# 그 외 문법적으로 모호함이 없는 안전한 교정만 포함.
+# (예: "합니다"→"한다"는 형용사/동사 구분이 안 되어 오역 위험이 있으므로 제외)
+_TONE_FIX_PATTERNS = [
+    (re.compile("입니다"), "이다"),    # 명사+입니다→이다
+    (re.compile("없습니다"), "없다"),  # 받침이 'ㅄ'이라 위 정규식에 안 걸림
+    (re.compile(r"(다|라|냐|자)고 합니다"), r"\1고 한다"),  # 인용구문: 항상 동사 용법이라 안전
+    (re.compile("죠"), "지"),          # 보이죠→보이지
+    (re.compile("네요"), "네"),        # 신기하네요→신기하네
+]
+
+
+def _normalize_tone(text: str) -> str:
+    """본문에 남은 격식체(~습니다/~입니다 등)를 평어체로 안전 변환.
+    [CHAT] 블록은 의도적인 구어체이므로 건드리지 않는다.
+    """
+    chats = []
+
+    def _stash(m):
+        chats.append(m.group(0))
+        return f"\x00CHAT{len(chats) - 1}\x00"
+
+    stashed = _CHAT_BLOCK_RE.sub(_stash, text)
+
+    stashed = _PAST_TENSE_RE.sub(_fix_past_tense, stashed)
+    for pattern, repl in _TONE_FIX_PATTERNS:
+        stashed = pattern.sub(repl, stashed)
+
+    for i, chat in enumerate(chats):
+        stashed = stashed.replace(f"\x00CHAT{i}\x00", chat)
+
+    return stashed
+
+
 def parse_output(raw: str, blog_name: str = "블로그") -> dict:
     """Claude 출력에서 제목, 본문, 태그, 발췌문, SEO 필드 분리"""
 
@@ -290,6 +342,9 @@ def parse_output(raw: str, blog_name: str = "블로그") -> dict:
         raw,
         flags=re.MULTILINE,
     ).strip()
+
+    # 격식체(~습니다/~입니다 등) 잔존분 평어체로 안전 교정
+    body = _normalize_tone(body)
 
     # 제목 추출 — "# 제목" 우선, 없으면 SEO_TITLE, 그것도 없으면 첫 번째 ## 헤딩
     title = ""
