@@ -263,36 +263,53 @@ EXCERPT: 150자 이내 한국어 발췌문"""
 
 _CHAT_BLOCK_RE = re.compile(r"\[CHAT\].*?\[/CHAT\]", re.DOTALL)
 
-# 과거형 어미: 받침이 'ㅆ'인 음절(했/갔/왔/컸/있...) + "습니다" → 그 음절 + "다"
-# 예: 했습니다→했다, 도달했습니다→도달했다, 있습니다→있다
-_PAST_TENSE_RE = re.compile(r"([가-힣])습니다")
+# ── 말투 정규화 상수·함수 ──────────────────────────────────────
+
+# 한글 종성(받침) 인덱스 (Hangul syllable = 0xAC00 + (초*21+중)*28 + 종)
+_JONGSEONG_SSANGSIOT = 20   # ㅆ — 있/없/했/갔... + 습니다 → 같은 음절 + 다
+_JONGSEONG_BIEUP      = 17  # ㅂ —됩/갑/봅/옵/줍... + 니다 → 받침 ㄴ(4)으로 교체
+_JONGSEONG_NIEUN      = 4   # ㄴ
+
+_PAST_TENSE_RE = re.compile(r"([가-힣])습니다")   # ㅆ받침+습니다 (했습니다 등)
+_BPNIDA_RE     = re.compile(r"([가-힣])니다")     # ㅂ받침+니다  (됩니다/갑니다 등)
 
 
-def _has_ssang_siot_batchim(ch: str) -> bool:
+def _jongseong(ch: str) -> int:
     code = ord(ch)
-    if 0xAC00 <= code <= 0xD7A3:
-        return (code - 0xAC00) % 28 == 20  # 받침 'ㅆ'의 인덱스
-    return False
+    return (code - 0xAC00) % 28 if 0xAC00 <= code <= 0xD7A3 else -1
 
 
 def _fix_past_tense(m: re.Match) -> str:
+    """ㅆ받침 + 습니다 → ㅆ받침 + 다  (했습니다→했다, 있습니다→있다)"""
     ch = m.group(1)
-    return f"{ch}다" if _has_ssang_siot_batchim(ch) else m.group(0)
+    return f"{ch}다" if _jongseong(ch) == _JONGSEONG_SSANGSIOT else m.group(0)
 
 
-# 그 외 문법적으로 모호함이 없는 안전한 교정만 포함.
-# (예: "합니다"→"한다"는 형용사/동사 구분이 안 되어 오역 위험이 있으므로 제외)
+def _fix_bpnida(m: re.Match) -> str:
+    """ㅂ받침 + 니다 → ㄴ받침 + 다  (됩니다→된다, 갑니다→간다, 봅니다→본다)
+    '합니다'는 하다 동사(분석합니다→분석한다 ✓)와
+    하다 형용사(중요합니다→중요한다 ✗) 구분이 불가해 의도적 제외.
+    """
+    ch = m.group(1)
+    if ch == "합":      # 형용사/동사 구분 불가 — 건드리지 않음
+        return m.group(0)
+    if _jongseong(ch) == _JONGSEONG_BIEUP:
+        # ㅂ(17) → ㄴ(4): 코드 -13
+        return chr(ord(ch) - 13) + "다"
+    return m.group(0)
+
+
 _TONE_FIX_PATTERNS = [
-    (re.compile("입니다"), "이다"),    # 명사+입니다→이다
-    (re.compile("없습니다"), "없다"),  # 받침이 'ㅄ'이라 위 정규식에 안 걸림
-    (re.compile(r"(다|라|냐|자)고 합니다"), r"\1고 한다"),  # 인용구문: 항상 동사 용법이라 안전
-    (re.compile("죠"), "지"),          # 보이죠→보이지
-    (re.compile("네요"), "네"),        # 신기하네요→신기하네
+    (re.compile("입니다"), "이다"),                          # 명사+입니다 → 이다
+    (re.compile("없습니다"), "없다"),                        # ㅄ받침이라 위 정규식 안 걸림
+    (re.compile(r"(다|라|냐|자)고 합니다"), r"\1고 한다"),  # 인용구문: 항상 동사 용법
+    (re.compile("죠"), "지"),                                # 보이죠 → 보이지
+    (re.compile("네요"), "네"),                              # 신기하네요 → 신기하네
 ]
 
 
 def _normalize_tone(text: str) -> str:
-    """본문에 남은 격식체(~습니다/~입니다 등)를 평어체로 안전 변환.
+    """본문에 남은 격식체(~습니다/~입니다/~됩니다 등)를 평어체로 안전 변환.
     [CHAT] 블록은 의도적인 구어체이므로 건드리지 않는다.
     """
     chats = []
@@ -303,9 +320,14 @@ def _normalize_tone(text: str) -> str:
 
     stashed = _CHAT_BLOCK_RE.sub(_stash, text)
 
-    stashed = _PAST_TENSE_RE.sub(_fix_past_tense, stashed)
+    # 실행 순서 중요:
+    # 1) "입니다"→"이다" 먼저 소진 → 이후 ㅂ받침 규칙이 "입"을 잘못 처리 방지
     for pattern, repl in _TONE_FIX_PATTERNS:
         stashed = pattern.sub(repl, stashed)
+    # 2) ㅆ받침+습니다 (했습니다→했다, 있습니다→있다)
+    stashed = _PAST_TENSE_RE.sub(_fix_past_tense, stashed)
+    # 3) ㅂ받침+니다 (됩니다→된다, 갑니다→간다) — "입니다"가 이미 처리된 뒤
+    stashed = _BPNIDA_RE.sub(_fix_bpnida, stashed)
 
     for i, chat in enumerate(chats):
         stashed = stashed.replace(f"\x00CHAT{i}\x00", chat)
