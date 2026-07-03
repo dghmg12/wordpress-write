@@ -177,10 +177,12 @@ def _economy_format_rules() -> str:
 - 우주 스케일과 돈의 대비 개그("발사 한 번에 수백억인데 지연 보상은 0원이라는 거"),
   가벼운 자조 표현, 요즘 밈 뉘앙스. 억지 금지.
 
-[외부 링크 - 본문에 반드시 2~3개 삽입]
-형식: <a href="https://실제URL" target="_blank">앵커텍스트</a>
-우선순위: 해당 기업 공식 IR·보도자료 > SpaceNews·Defense News 기사 > 한국경제·연합뉴스 기사 > 위키백과
-주의: 홈페이지 루트 금지, 내용과 직접 관련된 하위 페이지·기사 URL만 사용. 확실한 URL만."""
+[외부 링크 — 자연스러운 곳에 1~3개]
+- 기업명·기술 용어·보고서 등 본문에 이미 등장하는 키워드에 인라인으로 자연스럽게 삽입.
+  예) "<a href="https://www.spacex.com/" target="_blank" rel="noopener">스페이스X</a>의 위성 발사 전략은..."
+- 억지로 넣지 않는다. 흐름이 자연스러운 곳에만.
+- 우선순위: 기업 공식 사이트·IR > SpaceNews·Defense News 기사 > 한국경제·연합뉴스 > 위키백과
+- 홈페이지 루트 금지. 확실한 URL만. 형식: <a href="URL" target="_blank" rel="noopener">앵커텍스트</a>"""
 
 
 def _meta_output_rules() -> str:
@@ -678,9 +680,12 @@ def _post_space_explore(internal_links: str = ""):
 [유머 — 1~2곳, 자연스럽게]
 우주 스케일과 일상의 대비 개그, 가벼운 말장난, 요즘 밈 뉘앙스. 억지 금지.
 
-[외부 링크 — 본문에 반드시 2~3개]
-NASA, ESA, Space.com, Universe Today, 한국천문연구원, 사이언스타임즈 등.
-홈페이지 루트 금지, 내용과 직접 관련된 하위 페이지 URL만.
+[외부 링크 — 자연스러운 곳에 1~3개]
+- 현상명·탐사선명·기관명 등 본문에 이미 등장하는 키워드에 인라인으로 자연스럽게 삽입.
+  예) "<a href="https://science.nasa.gov/black-holes/" target="_blank" rel="noopener">블랙홀</a>은..."
+- 억지로 넣지 않는다. 흐름이 자연스러운 곳에만.
+- 우선순위: NASA·ESA 공식 페이지 > Space.com·Universe Today 기사 > 한국천문연구원 > 위키백과
+- 홈페이지 루트 금지. 확실한 URL만. 형식: <a href="URL" target="_blank" rel="noopener">앵커텍스트</a>
 
 {chat}
 
@@ -774,9 +779,12 @@ def _post_space_science(internal_links: str = ""):
 [유머 - 1~2곳, 자연스럽게]
 우주 스케일과 일상의 대비 개그, 가벼운 말장난, 요즘 밈 뉘앙스. 억지 금지.
 
-[외부 링크 - 본문에 반드시 2~3개]
-NASA, ESA, Space.com, Universe Today, 한국천문연구원, 한국어 위키백과 등.
-홈페이지 루트 금지, 내용과 직접 관련된 하위 페이지 URL만.
+[외부 링크 — 자연스러운 곳에 1~3개]
+- 현상명·탐사선명·기관명 등 본문에 이미 등장하는 키워드에 인라인으로 자연스럽게 삽입.
+  예) "<a href="https://www.nasa.gov/solar-system/mars/" target="_blank" rel="noopener">화성 탐사</a>는..."
+- 억지로 넣지 않는다. 흐름이 자연스러운 곳에만.
+- 우선순위: NASA·ESA 공식 페이지 > Space.com·Universe Today 기사 > 한국천문연구원 > 위키백과
+- 홈페이지 루트 금지. 확실한 URL만. 형식: <a href="URL" target="_blank" rel="noopener">앵커텍스트</a>
 
 {chat}
 
