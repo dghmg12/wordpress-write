@@ -62,26 +62,16 @@ def main():
 
     results = []
 
-    # ── blacknudge: 목요일만 잡학, 나머지 평일(월~수·금)은 라이프스타일 ──
+    # ── blacknudge: 월~금 라이프스타일 (음식/문화·여행/외출·건강/운동 랜덤) ──
     if weekday < 5:  # 월~금 (토요일 블랙넛지 없음)
-        if weekday == 3:  # 목요일: 잡학 (1회/주)
-            logging.info('\n[잡학] 블랙넛지 잡학 포스팅...')
-            try:
-                from trivia import post_trivia
-                post_trivia()
-                results.append('블랙넛지/잡학 ✅')
-            except Exception as e:
-                logging.error(f'  ❌ 블랙넛지/잡학 오류: {e}')
-                results.append('블랙넛지/잡학 ❌')
-        else:  # 월·화·수·금: 라이프스타일
-            logging.info('\n[라이프스타일] 블랙넛지 라이프스타일 포스팅...')
-            try:
-                from lifestyle import post_lifestyle
-                post_lifestyle()
-                results.append('블랙넛지/라이프스타일 ✅')
-            except Exception as e:
-                logging.error(f'  ❌ 블랙넛지/라이프스타일 오류: {e}')
-                results.append('블랙넛지/라이프스타일 ❌')
+        logging.info('\n[라이프스타일] 블랙넛지 라이프스타일 포스팅...')
+        try:
+            from lifestyle import post_lifestyle
+            post_lifestyle()
+            results.append('블랙넛지/라이프스타일 ✅')
+        except Exception as e:
+            logging.error(f'  ❌ 블랙넛지/라이프스타일 오류: {e}')
+            results.append('블랙넛지/라이프스타일 ❌')
 
     # ── newbicon: 우주 경제 분석 (월~금) / 우주과학 (토) ────
     logging.info('\n[뉴비콘] 포스팅...')
