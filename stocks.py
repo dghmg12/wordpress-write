@@ -132,9 +132,15 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
 
 def _ticker_block(t: dict, idx: int, post_excerpt: str) -> str:
     """차트 1개 + AI 분석 버튼 1개 쌍 HTML 반환"""
+    label = f'{t["exchange"]} : {t["symbol"]}' if t["exchange"] else t["symbol"]
+    ticker_label = (
+        f'<p style="font-size:.95em;font-weight:700;color:#1a1a2e;margin:0 0 6px;">'
+        f'📈 {label}</p>'
+    )
     chart_html = _chart_widget(t["tv"], f"tv_{idx}")
     analysis_html = _generate_analysis([t], post_excerpt)
     return (
+        f'{ticker_label}'
         f'{chart_html}'
         f'<details style="margin-top:-4px;margin-bottom:20px;">'
         f'<summary style="display:inline-flex;align-items:center;gap:6px;'
