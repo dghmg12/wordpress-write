@@ -232,11 +232,12 @@ def write_article(articles: list[dict], topic: str = "", used_keywords: list[str
   ④ SEO_TITLE: 키워드로 시작하거나 앞쪽 3단어 이내에 배치
   ⑤ SEO_DESCRIPTION 첫 문장: 키워드 포함
 - 키워드 밀도: 전체 본문에서 1~2% (억지 반복 금지, 자연스럽게 분산)
-- 외부 링크: 자연스러운 곳에 1~3개. 억지로 넣지 않는다.
-  키워드·기관명·제품명 등 본문에 이미 등장하는 단어에 인라인으로 삽입.
-  예) "<a href="URL" target="_blank" rel="noopener">질병관리청 권고 기준</a>에 따르면..."
-  신뢰도 순서: 공공기관·대형 언론사 > 전문 사이트 > 나무위키·위키백과.
-  홈페이지 루트 금지. 확실한 URL만 사용.{link_instruction}
+- 외부 링크: 이미지 출처(Pixabay 등)와 별개로, 본문 글 내에 반드시 1~2개 삽입한다.
+  본문에 이미 등장하는 키워드(기관명·기업명·현상명·제품명 등)에 인라인으로 자연스럽게.
+  예) "러닝의 <a href="https://ko.wikipedia.org/wiki/유산소_운동" target="_blank" rel="noopener">유산소 운동</a> 효과는..."
+  URL이 안정적인 소스 우선: 위키백과(ko.wikipedia.org/wiki/), 나무위키(namu.wiki/w/),
+  정부·공공기관(.go.kr), NASA(nasa.gov), WHO(who.int), 대형 언론사 기사 URL.
+  홈페이지 루트 단독(예: namu.wiki, pixabay.com) 금지. 하위 페이지 URL 사용.{link_instruction}
 
 ---
 글 본문이 끝나면 반드시 아래 6줄을 출력한다. 절대 빠뜨리지 말 것.

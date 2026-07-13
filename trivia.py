@@ -199,12 +199,15 @@ def post_trivia():
   ✅ "솔직히", "이게 진짜 신기한 부분인데", "쉽게 말하면", "한마디로" 같은 표현 적극 활용.
   ❌ ~습니다/~요/~죠 금지.
 
-[외부 링크 — 자연스러운 곳에 1~3개]
-- 용어·인물·현상 등 본문에 이미 등장하는 키워드에 인라인으로 자연스럽게 삽입.
-  예) "<a href="https://ko.wikipedia.org/wiki/블랙홀" target="_blank" rel="noopener">블랙홀</a>의 정의는..."
-- 억지로 넣지 않는다. 흐름이 자연스러운 곳에만.
-- 추천 소스: 위키백과·나무위키·사이언스타임즈·대형 언론사 기사 등
-- 홈페이지 루트 금지. 확실한 URL만. 형식: <a href="URL" target="_blank" rel="noopener">앵커텍스트</a>
+[외부 링크 — 이미지 출처와 별개로, 본문에 반드시 1~2개 삽입]
+- Pixabay 등 이미지 출처 링크는 카운트 안 됨. 글 본문 내에 따로 1~2개를 넣어야 한다.
+- 본문에 이미 등장하는 키워드(용어·현상·인물 등)에 인라인으로 자연스럽게.
+  예) "<a href="https://ko.wikipedia.org/wiki/블랙홀" target="_blank" rel="noopener">블랙홀</a>의 사건 지평선은..."
+      "<a href="https://namu.wiki/w/하품" target="_blank" rel="noopener">하품</a>이 전염되는 이유는..."
+- URL이 안정적인 소스 우선: 위키백과(ko.wikipedia.org/wiki/), 나무위키(namu.wiki/w/),
+  사이언스타임즈, 한국천문연구원, 대형 언론사 기사 URL.
+- 홈페이지 루트 단독 금지. 하위 페이지 URL 사용.
+- 형식: <a href="URL" target="_blank" rel="noopener">앵커텍스트</a>
 
 [유머 - 글 전체에 1~2곳, 자연스럽게]
 - 억지로 넣지 않는다. 맥락이 맞을 때만. 없으면 안 넣어도 된다.

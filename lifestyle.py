@@ -217,13 +217,15 @@ def _build_prompt(theme: dict, avoid_str: str, chat: str, internal_links: str = 
 공감되는 자조적 표현("이거 나만 몰랐나?"), 가벼운 과장("이래서 내 지갑이 얇았구나"),
 요즘 밈 뉘앙스("이거 진짜 실화임?"). 억지 개그 금지.
 
-[외부 링크 — 자연스러운 곳에 1~3개]
-- 제품명·기관명·연구명 등 본문에 이미 등장하는 키워드에 인라인으로 자연스럽게 삽입.
-  예) "질병관리청이 발표한 <a href="https://www.kdca.go.kr/..." target="_blank" rel="noopener">권고 기준</a>에 따르면..."
-- 억지로 넣지 않는다. 흐름이 자연스러운 곳에만.
-- 신뢰도 순서: 공공기관·대형 언론사 > 전문 사이트 > 나무위키·위키백과
-- 홈페이지 루트 금지. 확실한 URL만. 형식: <a href="URL" target="_blank" rel="noopener">앵커텍스트</a>
-❌ 확실하지 않은 URL 지어내지 말 것
+[외부 링크 — 이미지 출처와 별개로, 본문에 반드시 1~2개 삽입]
+- Pixabay 등 이미지 출처 링크는 카운트 안 됨. 글 본문 내에 따로 1~2개를 넣어야 한다.
+- 본문에 이미 등장하는 키워드(기관명·제품명·용어 등)에 인라인으로 자연스럽게.
+  예) "하루 권장 수분량은 <a href="https://www.kdca.go.kr/contents.es?mid=a20203050000" target="_blank" rel="noopener">질병관리청 기준</a>으로..."
+      "러닝의 <a href="https://ko.wikipedia.org/wiki/유산소_운동" target="_blank" rel="noopener">유산소 운동</a> 효과는..."
+- URL이 안정적인 소스 우선: 위키백과(ko.wikipedia.org/wiki/), 나무위키(namu.wiki/w/),
+  정부·공공기관(.go.kr), 대형 언론사 기사 URL, 브랜드 공식 사이트.
+- 홈페이지 루트 단독(namu.wiki, pixabay.com만 넣기) 금지. 하위 페이지 URL 사용.
+- 형식: <a href="URL" target="_blank" rel="noopener">앵커텍스트</a>
 
 {chat}
 
