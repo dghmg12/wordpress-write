@@ -798,6 +798,104 @@ def _post_space_science(internal_links: str = ""):
     return _run_and_publish(prompt, mode='우주과학')
 
 
+# ── 국내 우주·천문 행사 탐지 & 소개 글 ──────────────────────
+def _find_space_festival() -> dict | None:
+    """Gemini로 60일 이내 국내 우주·천문 관련 행사 검색.
+    반환: {'name', 'date', 'location', 'detail'} 또는 None"""
+    now = datetime.now(KST)
+    prompt = f"""오늘 날짜: {now.strftime('%Y년 %m월 %d일')}
+
+지금부터 60일 이내에 한국에서 열리는 우주·천문 관련 행사를 검색하라.
+대상: 별빛 축제, 천문대 특별 관측회, 항공우주 박람회, 과학 페스티벌, 우주 전시회, 유성우 관측 이벤트 등.
+온라인 행사 제외. 오프라인(현장 방문 가능) 행사만.
+
+검색 결과가 있으면 가장 가까운 일정 1개만 아래 형식으로 출력:
+FESTIVAL_NAME: [행사 공식 이름]
+FESTIVAL_DATE: [날짜 또는 기간, 예: 2026년 7월 20일~22일]
+FESTIVAL_LOCATION: [장소명, 도시]
+FESTIVAL_DETAIL: [행사 내용 간단 설명 2~3문장]
+
+없으면:
+FESTIVAL_NAME: 없음"""
+
+    try:
+        raw = call_llm(prompt, max_tokens=600, use_search=True)
+        parsed = {}
+        for line in raw.strip().splitlines():
+            if ':' in line:
+                key, _, val = line.partition(':')
+                parsed[key.strip()] = val.strip()
+        name = parsed.get('FESTIVAL_NAME', '없음').strip()
+        if not name or name == '없음':
+            return None
+        return {
+            'name': name,
+            'date': parsed.get('FESTIVAL_DATE', ''),
+            'location': parsed.get('FESTIVAL_LOCATION', ''),
+            'detail': parsed.get('FESTIVAL_DETAIL', ''),
+        }
+    except Exception as e:
+        print(f"  ⚠ 행사 검색 오류: {e}")
+        return None
+
+
+def _post_space_festival(festival: dict, internal_links: str = "") -> dict | None:
+    """국내 우주·천문 행사 소개 글 작성 및 발행"""
+    avoid_str = _build_avoid_str()
+    chat = _build_chat_instruction()
+
+    prompt = f"""뉴비콘 블로그에 올릴 국내 우주·천문 행사 소개 글을 써라.
+
+[행사 정보]
+- 행사명: {festival['name']}
+- 날짜·기간: {festival['date']}
+- 장소: {festival['location']}
+- 행사 개요: {festival['detail']}
+
+[작성 방향]
+- 이 행사가 어떤 곳이고 무엇을 볼·체험할 수 있는지 독자가 가보고 싶게 써라.
+- 우주·천문에 관심 있는 일반인, 가족, 학생 독자 대상.
+- 행사 일정·장소·관람 팁 등 실용 정보 반드시 포함.
+- 경제·투자 분석 없이 순수 행사 소개 글.
+
+[금지 주제 — 최근 발행됨]
+{avoid_str}
+
+[제목 형식]
+"[행사명], 언제 어디서 열리나 — 놓치면 아쉬운 이유",
+"우주 덕후라면 꼭 가봐야 할 [행사명]" 등 방문 유도 형식.
+
+{build_seo_prompt()}
+
+[형식 조건]
+- 분량: 500~700단어.
+- 대제목(##): 반드시 **굵게**. 2~3개.
+- 소제목(###): 각 ## 아래 1~2개.
+- 이모지: 대제목·소제목 앞에 맥락에 맞게.
+- 리스트(-): 3개 이상 나열 시 필수.
+- 굵게(**bold**): 날짜·장소·핵심 정보 강조.
+- 문체: 친구한테 추천하듯 쉽고 편하게. ~다/~이다. ❌ ~습니다/~요 금지.
+
+[외부 링크 — 자연스러운 곳에 1~2개]
+- 행사 공식 사이트 또는 관련 기관 페이지 링크.
+- 확실한 URL만. 형식: <a href="URL" target="_blank" rel="noopener">앵커텍스트</a>
+❌ 확실하지 않은 URL 지어내지 말 것
+
+{chat}
+
+[내용 구성]
+1. 도입부 (2~3문장): 이 행사가 왜 지금 가봐야 하는지.
+2. ## **[행사 소개 — 뭘 볼 수 있나]**: 프로그램·전시·체험 내용 구체적으로.
+3. ## **[일정·장소·관람 팁]**: 날짜·운영 시간·입장료·교통·주의사항.
+4. 마무리 (2문장): "이 기회 놓치지 말라"는 느낌으로.
+
+{internal_links}
+
+{_meta_output_rules()}"""
+
+    return _run_and_publish(prompt, mode='축제소개')
+
+
 # ── 공통 실행·발행 ─────────────────────────────────────────
 def _run_and_publish(prompt: str, mode: str) -> dict:
     print(f"  Gemini API 호출 중 ({mode})...")
@@ -878,19 +976,35 @@ def post_space():
 
     if weekday in GLOBAL_DAYS:
         print(f"  🌍 오늘은 {day} → 글로벌 우주 경제 뉴스 분석")
-        return _post_global_economy(internal_links)
+        result = _post_global_economy(internal_links)
     elif weekday in KOREA_DAYS:
         print(f"  🇰🇷 오늘은 {day} → 국내 방산·우주 산업 분석")
-        return _post_korea_defense(internal_links)
+        result = _post_korea_defense(internal_links)
     elif weekday in EXPLORE_DAYS:
         print(f"  🌌 오늘은 {day} → 우주 탐구 (과학·탐사·현상)")
-        return _post_space_explore(internal_links)
+        result = _post_space_explore(internal_links)
     elif weekday in COMPANY_DAYS:
         print(f"  🏢 오늘은 {day} → 우주 기업 행보 & 산업 파급효과")
-        return _post_company_analysis(internal_links)
+        result = _post_company_analysis(internal_links)
     else:  # SCIENCE_DAYS (토)
         print(f"  🔭 오늘은 {day} → 우주과학 탐구")
-        return _post_space_science(internal_links)
+        result = _post_space_science(internal_links)
+
+    # ── 국내 우주·천문 행사 탐지 (요일 무관) ──────────────────
+    print("\n  🎪 국내 우주·천문 행사 검색 중 (60일 이내)...")
+    festival = _find_space_festival()
+    if festival:
+        recent_titles = get_recent_titles(days=60, site='newbicon_space')
+        already_posted = any(festival['name'] in t for t in recent_titles)
+        if already_posted:
+            print(f"  ℹ 이미 발행된 행사: {festival['name']} → 건너뜀")
+        else:
+            print(f"  🎉 행사 발견: {festival['name']} ({festival['date']}) → 소개 글 작성")
+            _post_space_festival(festival, internal_links)
+    else:
+        print("  ℹ 임박한 국내 우주·천문 행사 없음 → 건너뜀")
+
+    return result
 
 
 if __name__ == '__main__':
