@@ -207,11 +207,12 @@ def _build_prompt(theme: dict, avoid_str: str, chat: str, internal_links: str = 
 - 하이라이트(<mark>): 독자가 꼭 기억할 핵심 정보 1~2곳.
 - 비용·시간 등 수치는 반드시 포함. 비교할 수 있게 제시.
 - 전문용어 첫 등장 시 괄호로 쉬운 설명.
-- 문체: 친구한테 설명하듯 쉽고 편하게. 단, 본문 문장 종결은 반드시 ~다/~이다/~한다.
-  ❌ 본문에서 ~야/~어/~지/~잖아 종결 절대 금지 (그 말투는 [CHAT] 블록 안에서만 허용).
+- 문체: 독자에게 친근하게 말하는 경어체로 쓴다. 본문 문장 종결은 반드시 ~습니다/~입니다/~합니다.
+  '그렇죠', '~지요', '~네요' 같은 자연스러운 경어체도 허용.
+  ❌ 본문에서 ~다/~이다/~한다 종결 금지 (그 말투는 [CHAT] 블록 안에서만 허용).
+  ❌ ~야/~어/~지/~잖아 종결 절대 금지 (그 말투도 [CHAT] 블록 안에서만 허용).
   ❌ 딱딱한 기사체 금지: "~것으로 전해졌다", "~에 따르면" 같은 표현 절대 금지.
-  ✅ "솔직히", "이게 진짜 포인트인데", "쉽게 말하면", "한마디로" 같은 표현 적극 활용.
-  ❌ ~습니다/~요/~죠 금지.
+  ✅ "솔직히", "이게 진짜 포인트인데요", "쉽게 말하면", "한마디로" 같은 표현 적극 활용.
 
 [유머 — 1~2곳, 자연스럽게]
 공감되는 자조적 표현("이거 나만 몰랐나?"), 가벼운 과장("이래서 내 지갑이 얇았구나"),
@@ -252,8 +253,21 @@ IMAGE_QUERY: 글 핵심 장면 영어 3~5단어 (구체적 사물·장면, 추�
 TAGS: 태그1,태그2,태그3,태그4,태그5"""
 
 
-def post_lifestyle():
-    theme, avoid_str = _pick_theme_and_avoid()
+def post_lifestyle(theme_override: dict | None = None):
+    if theme_override:
+        theme = theme_override
+        keywords = get_recent_keywords(days=60, site='blacknudge_lifestyle')
+        titles   = get_recent_titles(days=60, site='blacknudge_lifestyle')
+        lines = []
+        if keywords:
+            lines.append('최근 키워드: ' + ', '.join(keywords[-30:]))
+        if titles:
+            lines.append('최근 제목 (이 주제들과 겹치거나 의미상 비슷한 것 금지):')
+            for t in titles[-20:]:
+                lines.append(f'  - {t}')
+        avoid_str = '\n'.join(lines) if lines else '없음'
+    else:
+        theme, avoid_str = _pick_theme_and_avoid()
     chat = _build_chat_instruction()
     print(f"  오늘의 라이프스타일 테마: [{theme['name']}]")
 

@@ -64,10 +64,25 @@ def main():
 
     # ── blacknudge: 월~금 라이프스타일 (음식/문화·여행/외출·건강/운동 랜덤) ──
     if weekday < 5:  # 월~금 (토요일 블랙넛지 없음)
+        # next_post.json 오버라이드 확인 (하루 한정 주제 지정)
+        import json as _json, os as _os
+        _override_file = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'next_post.json')
+        _theme_override = None
+        if _os.path.exists(_override_file):
+            try:
+                with open(_override_file, encoding='utf-8') as _f:
+                    _data = _json.load(_f)
+                if _data.get('date') == now.strftime('%Y-%m-%d') and _data.get('site') == 'blacknudge_lifestyle':
+                    _theme_override = _data.get('theme')
+                    _os.remove(_override_file)
+                    logging.info(f'  📌 주제 오버라이드 적용: {_theme_override["name"]}')
+            except Exception as _e:
+                logging.warning(f'  ⚠ next_post.json 읽기 실패: {_e}')
+
         logging.info('\n[라이프스타일] 블랙넛지 라이프스타일 포스팅...')
         try:
             from lifestyle import post_lifestyle
-            post_lifestyle()
+            post_lifestyle(theme_override=_theme_override)
             results.append('블랙넛지/라이프스타일 ✅')
         except Exception as e:
             logging.error(f'  ❌ 블랙넛지/라이프스타일 오류: {e}')
