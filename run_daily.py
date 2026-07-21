@@ -88,15 +88,8 @@ def main():
             logging.error(f'  ❌ 블랙넛지/라이프스타일 오류: {e}')
             results.append('블랙넛지/라이프스타일 ❌')
 
-    # ── newbicon: 우주 경제 분석 (월~금) / 우주과학 (토) ────
-    logging.info('\n[뉴비콘] 포스팅...')
-    try:
-        from space import post_space
-        post_space()
-        results.append('뉴비콘 ✅')
-    except Exception as e:
-        logging.error(f'  ❌ 뉴비콘 오류: {e}')
-        results.append('뉴비콘 ❌')
+    # ── newbicon: 발행 중지 ────────────────────────────────
+    logging.info('\n[뉴비콘] 발행 중지 중 → 건너뜀')
 
     # ── 최종 요약 ───────────────────────────────────────────
     end = datetime.now(KST)
