@@ -148,23 +148,25 @@ def _ticker_block(t: dict, idx: int, post_excerpt: str) -> str:
     company_name = _extract_company_name(analysis_html) or (
         f'{t["exchange"]} : {t["symbol"]}' if t["exchange"] else t["symbol"]
     )
+    margin_top = 'margin-top:20px;' if idx > 0 else ''
     ticker_label = (
         f'<p style="font-size:.95em;font-weight:700;color:#1a1a2e;margin:0 0 6px;">'
         f'📈 {company_name}</p>'
     )
     return (
+        f'<div style="background:#fff;padding:16px;border:1px solid #ddd;border-radius:12px;{margin_top}">'
         f'{ticker_label}'
         f'{chart_html}'
-        f'<details style="margin-top:-4px;margin-bottom:20px;">'
-        f'<summary style="display:inline-flex;align-items:center;gap:6px;'
-        f'background:#1a1a2e;color:#fff;border-radius:20px;padding:8px 20px;'
+        f'<details style="border-radius:10px;background:#f3f5f7;">'
+        f'<summary style="display:flex;align-items:center;gap:6px;color:#121212;padding:8px 20px;'
         f'font-size:.88em;font-weight:700;cursor:pointer;list-style:none;user-select:none;">'
-        f'🤖 AI 종목 분석</summary>'
-        f'<div style="margin-top:10px;padding:16px 16px 10px;background:#fff;'
-        f'border:1px solid #dde3ec;border-radius:10px;font-size:.93em;line-height:1.7;color:#333;">'
+        f'🤖 AI 종목 분석 보기</summary>'
+        f'<div style="padding:16px 16px 10px;border-top:1px solid #999;'
+        f'font-size:.93em;line-height:1.7;color:#333;">'
         f'{analysis_html}'
         f'</div>'
         f'</details>'
+        f'</div>'
     )
 
 
@@ -190,14 +192,16 @@ def build_stock_section(tickers_raw: list[str], post_excerpt: str) -> str:
     )
 
     disclaimer_html = (
-        f'<p style="font-size:.78em;color:#999;border-top:1px solid #e8e8e8;'
+        f'<p style="font-size:.78em;color:#999;'
         f'padding-top:.7em;margin-top:.5em;line-height:1.5;">{DISCLAIMER}</p>'
     )
 
     return f"""<!-- wp:html -->
-<div style="margin:2em 0;padding:20px 20px 12px;background:#f8f9fb;border-radius:12px;border:1px solid #dde3ec;">
-  <p style="font-size:1em;font-weight:700;margin:0 0 14px;color:#1a1a2e;">📊 관련 종목 차트</p>
+<div style="background:#f8f9fa;border-left:4px solid #4a90d9;padding:1em 1.2em;margin:2em 0;border-radius:0 6px 6px 0;">
+<div style="margin:1em 0 2em 0;background:#f8f9fb;">
+  <p style="font-size:1em;font-weight:700;margin:0 0 14px;color:#1a1a2e;padding:12px 20px">📊 관련 종목 차트</p>
   {blocks}
   {disclaimer_html}
+</div>
 </div>
 <!-- /wp:html -->"""
