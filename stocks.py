@@ -130,15 +130,28 @@ def _generate_analysis(ticker_infos: list[dict], post_excerpt: str) -> str:
         return ""
 
 
+def _extract_company_name(analysis_html: str) -> str | None:
+    """AI 분석 <strong> 태그 첫머리에서 기업 한국어명 추출.
+    예: '<strong>한화에어로스페이스 (KRX:012450) : ...' → '한화에어로스페이스'"""
+    m = re.search(r'<strong>([^(<\n]+)', analysis_html)
+    if m:
+        return m.group(1).strip()
+    return None
+
+
 def _ticker_block(t: dict, idx: int, post_excerpt: str) -> str:
     """차트 1개 + AI 분석 버튼 1개 쌍 HTML 반환"""
-    label = f'{t["exchange"]} : {t["symbol"]}' if t["exchange"] else t["symbol"]
-    ticker_label = (
-        f'<p style="font-size:.95em;font-weight:700;color:#1a1a2e;margin:0 0 6px;">'
-        f'📈 {label}</p>'
-    )
     chart_html = _chart_widget(t["tv"], f"tv_{idx}")
     analysis_html = _generate_analysis([t], post_excerpt)
+
+    # 기업명: AI 분석 결과에서 추출, 실패 시 티커 코드로 대체
+    company_name = _extract_company_name(analysis_html) or (
+        f'{t["exchange"]} : {t["symbol"]}' if t["exchange"] else t["symbol"]
+    )
+    ticker_label = (
+        f'<p style="font-size:.95em;font-weight:700;color:#1a1a2e;margin:0 0 6px;">'
+        f'📈 {company_name}</p>'
+    )
     return (
         f'{ticker_label}'
         f'{chart_html}'
